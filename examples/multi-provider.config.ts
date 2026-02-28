@@ -23,14 +23,6 @@ export default defineArena({
       apiKeyEnv: 'MINIMAX_API_KEY',
       stripThinking: true,
     }),
-    openaiCompatible({
-      id: 'kimi/kimi-k2.5',
-      name: 'Kimi',
-      model: 'kimi-k2.5',
-      baseURL: 'https://api.kimi.com/coding/v1',
-      apiKeyEnv: 'KIMI_API_KEY',
-      stripThinking: true,
-    }),
   ],
 
   tasks: [
