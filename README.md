@@ -4,7 +4,7 @@
 
 `agent-arena` is a TypeScript-first framework to pit multiple LLM providers against each other on the same tasks and get structured, reproducible results: correctness, latency, tokens, and cost.
 
-- Compare OpenAI, Azure OpenAI, Anthropic, Gemini, OpenRouter, and OpenAI-compatible gateways.
+- Compare OpenAI, Azure OpenAI, Anthropic, and any OpenAI-compatible gateway.
 - Define tasks once, run them against many providers.
 - Get CLI tables and JSON results you can feed into dashboards, CI, or docs.
 
@@ -77,7 +77,7 @@ export default defineArena({
       }),
     },
   ],
-  scorers: ['latency', 'cost', 'correctness'],
+  scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity'],
   runs: 1,
 })
 ```
@@ -120,6 +120,7 @@ Examples:
 import {
   openai,
   azureOpenai,
+  anthropic,
   openaiCompatible,
   type ArenaProvider,
 } from 'agent-arena'
@@ -129,6 +130,8 @@ const oai = openai('gpt-4o')
 const azure = azureOpenai('gpt-4o', {
   deployment: 'my-deployment',
 })
+
+const claude = anthropic('claude-sonnet-4-20250514')
 
 const local: ArenaProvider = openaiCompatible({
   id: 'local/gpt-4o-like',
@@ -190,25 +193,24 @@ const tasks: ArenaTask[] = [
 
 ### Scorers
 
-Scorers take raw model outputs and turn them into **numeric scores** with optional details. Built-in scorers include:
+Scorers take raw model outputs and turn them into **numeric scores** (0–1) with optional details. Built-in scorers:
 
-- `latency`
-  - Measures wall-clock latency in milliseconds.
-- `cost`
-  - Uses token usage from the provider and a **pricing catalog** to estimate USD cost based on per-token prices.
-  - Still shows raw token counts even when the model is unknown to the catalog.
-- `correctness`
-  - Compares the output to `expected`.
-  - Starts simple (exact/strict comparison) and is designed to grow into:
-    - LLM-as-judge scoring.
-    - Schema-based correctness via Zod.
-    - Fuzzy similarity scorers.
+| Scorer | What it measures |
+|--------|-----------------|
+| `latency` | Wall-clock response time in milliseconds |
+| `cost` | Estimated USD cost from token usage and a bundled pricing catalog |
+| `correctness` | Exact match against `expected` (deep-equal, key-order independent for objects) |
+| `schema-correctness` | Validates output against the task's Zod `schema` via `safeParse()` |
+| `fuzzy-similarity` | Jaccard token-overlap similarity between output and `expected` |
+| `llm-judge-correctness` | Async LLM-as-judge — calls a judge model to score correctness 0–1 |
 
 Configure them in your arena:
 
 ```ts
-scorers: ['latency', 'cost', 'correctness']
+scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity']
 ```
+
+The `llm-judge-correctness` scorer requires a judge model and will use `gpt-4o-mini` by default. Configure via `AGENT_ARENA_JUDGE_MODEL` and `AGENT_ARENA_JUDGE_PROVIDER` env vars (`openai` or `azure-openai`).
 
 You can also add custom scorers for domain-specific metrics (e.g. tool-call correctness, safety, style).
 
@@ -279,73 +281,106 @@ The CLI loads TypeScript configs directly using a lightweight runtime loader so 
 
 ## Example: multi-provider benchmark
 
-Here's a richer example comparing multiple providers on a couple of tasks:
+Here's a richer example comparing multiple providers across tasks:
 
 ```ts
 // arena.config.ts
-import {
-  defineArena,
-  openai,
-  azureOpenai,
-  openaiCompatible,
-} from 'agent-arena'
+import { defineArena, azureOpenai } from 'agent-arena'
 import { z } from 'zod'
 
 export default defineArena({
   providers: [
-    openai('gpt-4o'),
-    azureOpenai('gpt-4o', { deployment: 'prod-chat' }),
-    openaiCompatible({
-      id: 'local/gpt-4o-like',
-      name: 'Local Gateway',
-      baseURL: 'http://localhost:11434/v1',
-      model: 'gpt-4o',
-      apiKeyEnv: 'LOCAL_LLM_API_KEY',
-    }),
+    azureOpenai('gpt-5-mini'),
+    azureOpenai('gpt-5-nano'),
+    azureOpenai('gpt-5.2-chat'),
   ],
   tasks: [
     {
-      name: 'support-answer',
+      name: 'extract-company',
       prompt:
-        'Customer asks: "What if my shoes do not fit?" Answer using our refund policy.',
-      expected:
-        'We offer a 30-day full refund at no extra costs if your shoes do not fit.',
+        'Extract the company name and role as JSON from: "I work at Acme Corp as a senior engineer." Return {"company": "...", "role": "..."}',
+      expected: { company: 'Acme Corp', role: 'senior engineer' },
+      schema: z.object({ company: z.string(), role: z.string() }),
     },
     {
-      name: 'order-json',
-      prompt: 'Turn "Order 3 red t-shirts, size M" into JSON.',
-      expected: { item: 't-shirt', color: 'red', size: 'M', quantity: 3 },
-      schema: z.object({
-        item: z.string(),
-        color: z.string(),
-        size: z.string(),
-        quantity: z.number(),
-      }),
+      name: 'summarize',
+      prompt:
+        'Summarize in one sentence: TypeScript is a strongly typed programming language that builds on JavaScript, giving you better tooling at any scale.',
+      expected:
+        'TypeScript is a typed superset of JavaScript that improves tooling for projects of any size.',
+    },
+    {
+      name: 'classify-sentiment',
+      prompt:
+        'Classify the sentiment of this review as "positive", "negative", or "neutral". Return only the classification word.\n\nReview: "The product arrived on time and works exactly as described. Very happy with my purchase!"',
+      expected: 'positive',
     },
   ],
-  scorers: ['latency', 'cost', 'correctness'],
-  runs: 3, // run multiple times for more stable numbers
+  scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity'],
+  runs: 1,
 })
 ```
 
-Then:
-
 ```bash
 npx agent-arena run
+```
+
+Output:
+
+```
+  ⬡ Agent Arena Results
+  ──────────────────────────────────────────────────────────────────────
+
+  Task: extract-company
+
+  Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
+  ─────────────────────────────────────────────────────────────────────────────────────────────
+  azure/gpt-5-mini              1533ms      ~$0.187m        139      100%      100%      100%
+  azure/gpt-5-nano              2963ms      ~$0.090m        270      100%      100%      100%
+  azure/gpt-5.2-chat            1370ms      ~$0.0011        126      100%      100%      100%
+
+  Task: summarize
+
+  Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
+  ─────────────────────────────────────────────────────────────────────────────────────────────
+  azure/gpt-5-mini              1516ms      ~$0.201m        131        0%         —       63%
+  azure/gpt-5-nano              2979ms      ~$0.115m        319        0%         —       50%
+  azure/gpt-5.2-chat             930ms      ~$0.551m         70        0%         —       43%
+
+  Task: classify-sentiment
+
+  Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
+  ─────────────────────────────────────────────────────────────────────────────────────────────
+  azure/gpt-5-mini               986ms      ~$0.034m         61      100%         —      100%
+  azure/gpt-5-nano              1318ms      ~$0.032m        125      100%         —      100%
+  azure/gpt-5.2-chat            1129ms      ~$0.620m         88      100%         —      100%
+
+  ──────────────────────────────────────────────────────────────────────
+  Summary
+
+  ◆ Most correct: azure/gpt-5-mini (avg 67%)
+  ◆ Fastest: azure/gpt-5.2-chat (avg 1143ms)
+  ◆ Cheapest: azure/gpt-5-nano (avg ~$0.079m)
+
+  Costs estimated from OpenRouter pricing catalog.
 ```
 
 ---
 
 ## Roadmap
 
+Shipped so far:
+
+- OpenAI, Azure OpenAI, Anthropic, and OpenAI-compatible providers
+- 6 built-in scorers including LLM-as-judge, schema validation, and fuzzy similarity
+- Colored console reporter with per-task tables and cross-provider summary
+- JSON reporter for CI/pipeline integration
+- Pricing catalog from OpenRouter with refresh script
+
 Planned directions (subject to community feedback):
 
 - **More providers**
-  - Anthropic, Gemini, OpenRouter-native, and more OpenAI-compatible gateways.
-- **Richer correctness**
-  - LLM-as-judge scorer.
-  - Schema-based correctness (Zod-powered).
-  - Fuzzy similarity and embedding-based scorers.
+  - Gemini, OpenRouter-native, and more OpenAI-compatible gateways.
 - **Better reporting**
   - Markdown/HTML/CSV reports.
   - GitHub Actions summaries.
@@ -353,6 +388,8 @@ Planned directions (subject to community feedback):
   - Multi-step tasks, tool-use evaluation, and agent traces.
 - **Plugin system**
   - First-class support for user-defined providers and scorers.
+- **Embedding-based scoring**
+  - Semantic similarity via embedding distance.
 
 If you have a specific use case (framework comparisons, multi-agent competitions, tool-calling benchmarks), please open an issue — those will shape what gets built first.
 
