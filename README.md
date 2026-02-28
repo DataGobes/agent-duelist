@@ -6,7 +6,7 @@
 
 > **Note:** This project was previously called `agent-arena`.
 
-- Compare OpenAI, Azure OpenAI, Anthropic, and any OpenAI-compatible gateway.
+- Compare OpenAI, Azure OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible gateway.
 - Define tasks once, run them against many providers.
 - Get CLI tables and JSON results you can feed into dashboards, CI, or docs.
 
@@ -38,6 +38,7 @@ You'll also need API keys for the providers you want to benchmark, for example:
 export OPENAI_API_KEY=sk-...
 export AZURE_OPENAI_API_KEY=...
 export ANTHROPIC_API_KEY=...
+export GOOGLE_API_KEY=...
 ```
 
 ---
@@ -123,6 +124,7 @@ import {
   openai,
   azureOpenai,
   anthropic,
+  gemini,
   openaiCompatible,
   type ArenaProvider,
 } from 'agent-duelist'
@@ -134,6 +136,8 @@ const azure = azureOpenai('gpt-4o', {
 })
 
 const claude = anthropic('claude-sonnet-4-20250514')
+
+const gem = gemini('gemini-2.5-flash') // uses GOOGLE_API_KEY
 
 const local: ArenaProvider = openaiCompatible({
   id: 'local/gpt-4o-like',
@@ -212,7 +216,17 @@ Configure them in your arena:
 scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity']
 ```
 
-The `llm-judge-correctness` scorer requires a judge model and will use `gpt-4o-mini` by default. Configure via `DUELIST_JUDGE_MODEL` and `DUELIST_JUDGE_PROVIDER` env vars (`openai` or `azure-openai`).
+The `llm-judge-correctness` scorer evaluates outputs on three criteria (accuracy, completeness, conciseness) and returns a composite decimal score. Configure the judge model directly in your arena config:
+
+```ts
+defineArena({
+  // ...
+  scorers: ['latency', 'cost', 'correctness', 'llm-judge-correctness'],
+  judgeModel: 'gemini-3.1-pro-preview', // or any OpenAI/Azure/Gemini model
+})
+```
+
+The judge model defaults to `gpt-4o-mini`. It can also be set via the `DUELIST_JUDGE_MODEL` env var. The judge backend is auto-detected from the model name — `gemini-*` models use Google's API, otherwise it falls back to OpenAI or Azure OpenAI.
 
 You can also add custom scorers for domain-specific metrics (e.g. tool-call correctness, safety, style).
 
@@ -370,7 +384,7 @@ Output:
 
 Shipped so far:
 
-- OpenAI, Azure OpenAI, Anthropic, and OpenAI-compatible providers
+- OpenAI, Azure OpenAI, Anthropic, Google Gemini, and OpenAI-compatible providers
 - 6 built-in scorers including LLM-as-judge, schema validation, and fuzzy similarity
 - Colored console reporter with per-task tables and cross-provider summary
 - JSON reporter for CI/pipeline integration
@@ -379,7 +393,7 @@ Shipped so far:
 Planned directions (subject to community feedback):
 
 - **More providers**
-  - Gemini, OpenRouter-native, and more OpenAI-compatible gateways.
+  - OpenRouter-native and more OpenAI-compatible gateways.
 - **Better reporting**
   - Markdown/HTML/CSV reports.
   - GitHub Actions summaries.
