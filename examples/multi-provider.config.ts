@@ -41,5 +41,5 @@ export default defineArena({
   ],
 
   scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity'],
-  runs: 1,
+  runs: 3,
 })

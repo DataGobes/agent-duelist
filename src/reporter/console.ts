@@ -31,16 +31,17 @@ export function consoleReporter(results: BenchmarkResult[]): void {
   const hasCost = scorerNames.includes('cost')
   const hasErrors = results.some((r) => r.error)
 
-  // Title
+  // Title — include run count so readers know results are aggregated
+  const runsPerCell = Math.max(...results.map((r) => r.run))
+  const runLabel = runsPerCell > 1 ? ` (${runsPerCell} runs each)` : ''
   console.log('')
-  console.log(`  ${bold('⬡ Agent Arena Results')}`)
+  console.log(`  ${bold(`⬡ Agent Arena Results${runLabel}`)}`)
   console.log(`  ${dim('─'.repeat(70))}`)
   console.log('')
 
   // Per-task tables
   for (const task of tasks) {
     console.log(`  ${bold(`Task: ${task}`)}`)
-    console.log('')
 
     // Build columns
     const cols: Col[] = [{ label: 'Provider', width: 22, align: 'left' }]
@@ -147,7 +148,7 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
 
   const byCorrectness = rankProviders(successResults, providers, correctnessKey)
   if (byCorrectness) {
-    console.log(`  ${cyan}◆${reset} Most correct: ${bold(byCorrectness.id)} (avg ${colorScore(byCorrectness.avg)})`)
+    console.log(`  ${cyan}◆${reset} Most correct: ${bold(byCorrectness.id)} ${dim(providerLabel(byCorrectness.id))} (avg ${colorScore(byCorrectness.avg)})`)
   }
 
   // Fastest
@@ -160,7 +161,7 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
     .sort((a, b) => a.avg - b.avg)[0]
 
   if (byLatency && byLatency.avg !== Infinity) {
-    console.log(`  ${cyan}◆${reset} Fastest: ${bold(byLatency.id)} (avg ${Math.round(byLatency.avg)}ms)`)
+    console.log(`  ${cyan}◆${reset} Fastest: ${bold(byLatency.id)} ${dim(providerLabel(byLatency.id))} (avg ${Math.round(byLatency.avg)}ms)`)
   }
 
   // Cheapest
@@ -180,7 +181,7 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
     .sort((a, b) => a.avg! - b.avg!)[0]
 
   if (byCost?.avg !== undefined) {
-    console.log(`  ${cyan}◆${reset} Cheapest: ${bold(byCost.id)} (avg ${formatCost(byCost.avg)})`)
+    console.log(`  ${cyan}◆${reset} Cheapest: ${bold(byCost.id)} ${dim(providerLabel(byCost.id))} (avg ${formatCost(byCost.avg)})`)
   }
 
   console.log('')
@@ -282,4 +283,14 @@ function pad(str: string, width: number, align: 'left' | 'right'): string {
 function colorLen(str: string): number {
   const stripped = str.replace(/\x1b\[[0-9;]*m/g, '')
   return str.length - stripped.length
+}
+
+function providerLabel(providerId: string): string {
+  const prefix = providerId.split('/')[0]
+  switch (prefix) {
+    case 'azure': return '(OpenAI via Azure)'
+    case 'openai': return '(OpenAI)'
+    case 'anthropic': return '(Anthropic)'
+    default: return `(${prefix})`
+  }
 }

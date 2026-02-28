@@ -78,7 +78,7 @@ export default defineArena({
     },
   ],
   scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity'],
-  runs: 1,
+  runs: 3,
 })
 ```
 
@@ -317,7 +317,7 @@ export default defineArena({
     },
   ],
   scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity'],
-  runs: 1,
+  runs: 3,
 })
 ```
 
@@ -328,39 +328,36 @@ npx agent-arena run
 Output:
 
 ```
-  ⬡ Agent Arena Results
+  ⬡ Agent Arena Results (3 runs each)
   ──────────────────────────────────────────────────────────────────────
 
   Task: extract-company
-
   Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
   ─────────────────────────────────────────────────────────────────────────────────────────────
-  azure/gpt-5-mini              1533ms      ~$0.187m        139      100%      100%      100%
-  azure/gpt-5-nano              2963ms      ~$0.090m        270      100%      100%      100%
-  azure/gpt-5.2-chat            1370ms      ~$0.0011        126      100%      100%      100%
+  azure/gpt-5-mini              1905ms      ~$0.189m        140      100%      100%      100%
+  azure/gpt-5-nano              2079ms      ~$0.081m        249      100%      100%      100%
+  azure/gpt-5.2-chat            1493ms      ~$0.0011        126      100%      100%      100%
 
   Task: summarize
-
   Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
   ─────────────────────────────────────────────────────────────────────────────────────────────
-  azure/gpt-5-mini              1516ms      ~$0.201m        131        0%         —       63%
-  azure/gpt-5-nano              2979ms      ~$0.115m        319        0%         —       50%
-  azure/gpt-5.2-chat             930ms      ~$0.551m         70        0%         —       43%
+  azure/gpt-5-mini              1723ms      ~$0.192m        127        0%         —       36%
+  azure/gpt-5-nano              2117ms      ~$0.081m        234        0%         —       43%
+  azure/gpt-5.2-chat            1008ms      ~$0.584m         72        0%         —       43%
 
   Task: classify-sentiment
-
   Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
   ─────────────────────────────────────────────────────────────────────────────────────────────
-  azure/gpt-5-mini               986ms      ~$0.034m         61      100%         —      100%
-  azure/gpt-5-nano              1318ms      ~$0.032m        125      100%         —      100%
-  azure/gpt-5.2-chat            1129ms      ~$0.620m         88      100%         —      100%
+  azure/gpt-5-mini              1012ms      ~$0.077m         82      100%         —      100%
+  azure/gpt-5-nano              1075ms      ~$0.024m        104      100%         —      100%
+  azure/gpt-5.2-chat             936ms      ~$0.526m         81      100%         —      100%
 
   ──────────────────────────────────────────────────────────────────────
   Summary
 
-  ◆ Most correct: azure/gpt-5-mini (avg 67%)
-  ◆ Fastest: azure/gpt-5.2-chat (avg 1143ms)
-  ◆ Cheapest: azure/gpt-5-nano (avg ~$0.079m)
+  ◆ Most correct: azure/gpt-5-mini (OpenAI via Azure) (avg 67%)
+  ◆ Fastest: azure/gpt-5.2-chat (OpenAI via Azure) (avg 1146ms)
+  ◆ Cheapest: azure/gpt-5-nano (OpenAI via Azure) (avg ~$0.062m)
 
   Costs estimated from OpenRouter pricing catalog.
 ```
