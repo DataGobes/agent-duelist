@@ -6,7 +6,7 @@
  *
  * Reads API keys from .env automatically.
  */
-import { defineArena, azureOpenai } from '../src/index.js'
+import { defineArena, azureOpenai, openaiCompatible } from '../src/index.js'
 import { z } from 'zod'
 
 // Use multiple deployments from Azure to compare models
@@ -15,6 +15,14 @@ export default defineArena({
     azureOpenai('gpt-5-mini'),
     azureOpenai('gpt-5-nano'),
     azureOpenai('gpt-5.2-chat'),
+    openaiCompatible({
+      id: 'minimax/minimax-m2.5',
+      name: 'MiniMax',
+      model: 'MiniMax-M2.5',
+      baseURL: 'https://api.minimax.io/v1',
+      apiKeyEnv: 'MINIMAX_API_KEY',
+      stripThinking: true,
+    }),
   ],
 
   tasks: [

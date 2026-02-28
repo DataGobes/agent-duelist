@@ -29,6 +29,8 @@ export interface OpenAICompatibleOptions {
   baseURL: string
   apiKey?: string
   apiKeyEnv?: string
+  /** Strip `<think>...</think>` blocks from reasoning models (e.g. DeepSeek-R1, MiniMax M2.5) */
+  stripThinking?: boolean
 }
 
 export function openaiCompatible(options: OpenAICompatibleOptions): ArenaProvider {
@@ -41,7 +43,7 @@ export function openaiCompatible(options: OpenAICompatibleOptions): ArenaProvide
     baseURL: options.baseURL,
   })
 
-  return makeProvider(options.id, options.name, options.model, client, options.model)
+  return makeProvider(options.id, options.name, options.model, client, options.model, options.stripThinking)
 }
 
 /**
@@ -69,6 +71,7 @@ function makeProvider(
   model: string,
   client: OpenAI | AzureOpenAI,
   requestModel: string,
+  stripThinking?: boolean,
 ): ArenaProvider {
   return {
     id,
@@ -96,7 +99,11 @@ function makeProvider(
       const latencyMs = Date.now() - start
 
       const choice = response.choices[0]
-      const rawContent = choice?.message?.content ?? ''
+      let rawContent = choice?.message?.content ?? ''
+
+      if (stripThinking) {
+        rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>\s*/, '')
+      }
 
       let output: string | Record<string, unknown> = rawContent
       if (input.schema) {
