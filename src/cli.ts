@@ -198,6 +198,7 @@ export default defineArena({
     // openai('gpt-4o'),
     // azureOpenai('gpt-4o-mini'),
     // anthropic('claude-sonnet-4-20250514'),
+    // gemini('gemini-2.5-flash'),
   ],
 
   tasks: [

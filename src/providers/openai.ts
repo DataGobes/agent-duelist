@@ -72,7 +72,7 @@ export function azureOpenai(model: string, options?: AzureOpenAIProviderOptions)
   return makeProvider(`azure/${model}`, 'Azure OpenAI', model, client, deployment)
 }
 
-function makeProvider(
+export function makeProvider(
   id: string,
   name: string,
   model: string,

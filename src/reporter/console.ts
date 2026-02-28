@@ -318,6 +318,7 @@ function apiKeyHint(providerId: string, error: string): string | undefined {
     case 'openai': return 'Set: export OPENAI_API_KEY=sk-...'
     case 'azure': return 'Set: export AZURE_OPENAI_API_KEY=... and AZURE_OPENAI_ENDPOINT=...'
     case 'anthropic': return 'Set: export ANTHROPIC_API_KEY=sk-ant-...'
+    case 'google': return 'Set: export GOOGLE_API_KEY=...'
     default: return `Check the API key for ${providerId}`
   }
 }
