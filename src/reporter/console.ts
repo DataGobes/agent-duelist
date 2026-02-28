@@ -269,9 +269,11 @@ function average(nums: number[]): number | undefined {
 
 function formatCost(usd: number | undefined): string {
   if (usd === undefined) return '—'
-  if (usd < 0.00001) return `~$${(usd * 1_000_000).toFixed(1)}µ`
-  if (usd < 0.001) return `~$${(usd * 1000).toFixed(3)}m`
-  return `~$${usd.toFixed(4)}`
+  if (usd === 0) return '$0.00'
+  if (usd >= 0.01) return `~$${usd.toFixed(2)}`
+  // Adaptive precision: always 2 significant figures, always in dollars
+  const digits = Math.max(4, -Math.floor(Math.log10(usd)) + 1)
+  return `~$${usd.toFixed(digits).replace(/0+$/, '')}`
 }
 
 function pad(str: string, width: number, align: 'left' | 'right'): string {
