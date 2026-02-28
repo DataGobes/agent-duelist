@@ -4,9 +4,7 @@
 
 `agent-duelist` is a TypeScript-first framework to pit multiple LLM providers against each other on the same tasks and get structured, reproducible results: correctness, latency, tokens, and cost.
 
-> **Note:** This project was previously called `agent-arena`.
->
-> What you get
+## What you get
 > <img width="739" height="473" alt="image" src="https://github.com/user-attachments/assets/41149222-1035-42fd-b643-4f8b856c30a0" />
 
 
