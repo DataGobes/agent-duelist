@@ -12,6 +12,12 @@ export interface ScorerContext {
   result: TaskResult
 }
 
-export type ScorerFn = (ctx: ScorerContext, providerId: string) => ScoreResult
+export type ScorerFn = (ctx: ScorerContext, providerId: string) => ScoreResult | Promise<ScoreResult>
 
-export type BuiltInScorerName = 'latency' | 'cost' | 'correctness'
+export type BuiltInScorerName =
+  | 'latency'
+  | 'cost'
+  | 'correctness'
+  | 'schema-correctness'
+  | 'fuzzy-similarity'
+  | 'llm-judge-correctness'

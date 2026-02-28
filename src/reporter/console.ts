@@ -1,5 +1,24 @@
 import type { BenchmarkResult } from '../runner.js'
 
+// ANSI color helpers
+const reset = '\x1b[0m'
+const boldCode = '\x1b[1m'
+const dimCode = '\x1b[2m'
+const green = '\x1b[32m'
+const red = '\x1b[31m'
+const yellow = '\x1b[33m'
+const cyan = '\x1b[36m'
+
+function bold(s: string) { return `${boldCode}${s}${reset}` }
+function dim(s: string) { return `${dimCode}${s}${reset}` }
+function colorScore(value: number): string {
+  const pct = Math.round(value * 100)
+  const str = `${pct}%`
+  if (value >= 0.8) return `${green}${str}${reset}`
+  if (value >= 0.5) return `${yellow}${str}${reset}`
+  return `${red}${str}${reset}`
+}
+
 export function consoleReporter(results: BenchmarkResult[]): void {
   if (results.length === 0) {
     console.log('\nNo results to display.\n')
@@ -8,62 +27,58 @@ export function consoleReporter(results: BenchmarkResult[]): void {
 
   const tasks = [...new Set(results.map((r) => r.taskName))]
   const providers = [...new Set(results.map((r) => r.providerId))]
-
-  // Derive which scorers are actually present in results
-  const scorerNames = [
-    ...new Set(results.flatMap((r) => r.scores.map((s) => s.name))),
-  ]
-
+  const scorerNames = [...new Set(results.flatMap((r) => r.scores.map((s) => s.name)))]
   const hasCost = scorerNames.includes('cost')
   const hasErrors = results.some((r) => r.error)
 
-  // Header
-  console.log(bold('Agent Arena Results'))
-  console.log(dim('─'.repeat(72)))
+  // Title
+  console.log('')
+  console.log(`  ${bold('⬡ Agent Arena Results')}`)
+  console.log(`  ${dim('─'.repeat(70))}`)
   console.log('')
 
-  // Per-task breakdown
+  // Per-task tables
   for (const task of tasks) {
-    console.log(bold(`Task: ${task}`))
+    console.log(`  ${bold(`Task: ${task}`)}`)
     console.log('')
 
-    // Build dynamic header
-    const columns: Column[] = [{ label: 'Provider', width: 24 }]
+    // Build columns
+    const cols: Col[] = [{ label: 'Provider', width: 22, align: 'left' }]
     for (const name of scorerNames) {
-      if (name === 'latency') columns.push({ label: 'Latency', width: 10 })
+      if (name === 'latency') cols.push({ label: 'Latency', width: 10, align: 'right' })
       else if (name === 'cost') {
-        columns.push({ label: 'Cost', width: 12 })
-        columns.push({ label: 'Tokens', width: 10 })
-      } else if (name === 'correctness') columns.push({ label: 'Correct', width: 10 })
-      else columns.push({ label: name, width: 10 })
+        cols.push({ label: 'Cost', width: 12, align: 'right' })
+        cols.push({ label: 'Tokens', width: 9, align: 'right' })
+      }
+      else if (name === 'correctness') cols.push({ label: 'Match', width: 8, align: 'right' })
+      else if (name === 'schema-correctness') cols.push({ label: 'Schema', width: 8, align: 'right' })
+      else if (name === 'fuzzy-similarity') cols.push({ label: 'Fuzzy', width: 8, align: 'right' })
+      else if (name === 'llm-judge-correctness') cols.push({ label: 'Judge', width: 8, align: 'right' })
+      else cols.push({ label: name, width: 10, align: 'right' })
     }
-    if (hasErrors) columns.push({ label: 'Status', width: 10 })
+    if (hasErrors) cols.push({ label: 'Status', width: 8, align: 'left' })
 
-    const totalWidth = columns.reduce((sum, c) => sum + c.width, 0)
-    console.log(dim(columns.map((c) => pad(c.label, c.width)).join('')))
-    console.log(dim('─'.repeat(totalWidth)))
+    const totalWidth = cols.reduce((sum, c) => sum + c.width + 2, 0)
+    console.log(`  ${dim(cols.map((c) => pad(c.label, c.width + 2, c.align)).join(''))}`)
+    console.log(`  ${dim('─'.repeat(totalWidth))}`)
 
     for (const provider of providers) {
       const taskResults = results.filter(
         (r) => r.taskName === task && r.providerId === provider
       )
-
       const errorResults = taskResults.filter((r) => r.error)
       const successResults = taskResults.filter((r) => !r.error)
 
       if (successResults.length === 0 && errorResults.length > 0) {
-        // All runs failed for this provider+task
-        const cells: string[] = [pad(provider, 24)]
+        const cells = [pad(provider, 24, 'left')]
         for (const name of scorerNames) {
           if (name === 'cost') {
-            cells.push(pad('—', 12))
-            cells.push(pad('—', 10))
-          } else {
-            cells.push(pad('—', 10))
-          }
+            cells.push(pad('—', 14, 'right'))
+            cells.push(pad('—', 11, 'right'))
+          } else cells.push(pad('—', cols.find((c) => c.label !== 'Provider')!.width + 2, 'right'))
         }
-        if (hasErrors) cells.push(pad('FAIL', 10))
-        console.log(cells.join(''))
+        if (hasErrors) cells.push(`  ${red}FAIL${reset}`)
+        console.log(`  ${cells.join('')}`)
         continue
       }
 
@@ -71,56 +86,126 @@ export function consoleReporter(results: BenchmarkResult[]): void {
       const avgDetails = averageDetails(successResults)
       const latencyMs = average(successResults.map((r) => r.raw.latencyMs))
 
-      const cells: string[] = [pad(provider, 24)]
+      const cells: string[] = [pad(provider, 24, 'left')]
+
       for (const name of scorerNames) {
         if (name === 'latency') {
-          cells.push(pad(latencyMs !== undefined ? `${Math.round(latencyMs)}ms` : '—', 10))
+          cells.push(pad(latencyMs !== undefined ? `${Math.round(latencyMs)}ms` : '—', 12, 'right'))
         } else if (name === 'cost') {
-          cells.push(pad(formatCost(avgDetails.costUsd), 12))
-          cells.push(pad(avgDetails.totalTokens !== undefined ? `${avgDetails.totalTokens}` : '—', 10))
-        } else if (name === 'correctness') {
-          cells.push(pad(formatCorrectness(avgScores['correctness']), 10))
+          cells.push(pad(formatCost(avgDetails.costUsd), 14, 'right'))
+          cells.push(pad(avgDetails.totalTokens !== undefined ? `${avgDetails.totalTokens}` : '—', 11, 'right'))
         } else {
           const val = avgScores[name]
-          cells.push(pad(val !== undefined ? val.toFixed(2) : '—', 10))
+          if (val === undefined) cells.push(pad('—', 10, 'right'))
+          else cells.push(pad(colorScore(val), 10 + colorLen(colorScore(val)), 'right'))
         }
       }
+
       if (hasErrors) {
         const failCount = errorResults.length
-        cells.push(pad(failCount > 0 ? `${failCount} err` : 'OK', 10))
+        cells.push(failCount > 0 ? `  ${yellow}${failCount} err${reset}` : `  ${green}OK${reset}`)
       }
-      console.log(cells.join(''))
+
+      console.log(`  ${cells.join('')}`)
     }
 
     console.log('')
   }
 
-  // Summary
-  const errorCount = results.filter((r) => r.error).length
-  console.log(dim('─'.repeat(72)))
-  console.log(dim(`${results.length} benchmark(s) across ${tasks.length} task(s) and ${providers.length} provider(s)`))
-  if (errorCount > 0) {
-    console.log(dim(`${errorCount} benchmark(s) failed — see errors below`))
-  }
-  if (hasCost) {
-    console.log(dim('Cost estimates based on published per-token pricing. Run `npx tsx scripts/update-pricing.ts` to refresh.'))
-  }
-  console.log('')
+  // Summary section
+  printSummary(results, providers)
 
-  // Print errors at the bottom
+  // Errors
+  const errorCount = results.filter((r) => r.error).length
   if (errorCount > 0) {
-    console.log(bold('Errors'))
-    console.log(dim('─'.repeat(72)))
+    console.log(`  ${bold('Errors')}`)
+    console.log(`  ${dim('─'.repeat(70))}`)
     for (const r of results.filter((r) => r.error)) {
-      console.log(`  ${r.providerId} × ${r.taskName} (run ${r.run}): ${r.error}`)
+      console.log(`  ${red}✗${reset} ${r.providerId} × ${r.taskName} (run ${r.run}): ${r.error}`)
     }
+    console.log('')
+  }
+
+  if (hasCost) {
+    console.log(dim(`  Costs estimated from OpenRouter pricing catalog. Run npx tsx scripts/update-pricing.ts to refresh.`))
     console.log('')
   }
 }
 
-interface Column {
+function printSummary(results: BenchmarkResult[], providers: string[]) {
+  const successResults = results.filter((r) => !r.error)
+  if (successResults.length === 0 || providers.length < 2) return
+
+  console.log(`  ${dim('─'.repeat(70))}`)
+  console.log(`  ${bold('Summary')}`)
+  console.log('')
+
+  // Best correctness (prefer llm-judge, fallback to correctness)
+  const correctnessKey = successResults.some((r) => r.scores.some((s) => s.name === 'llm-judge-correctness' && s.value >= 0))
+    ? 'llm-judge-correctness'
+    : 'correctness'
+
+  const byCorrectness = rankProviders(successResults, providers, correctnessKey)
+  if (byCorrectness) {
+    console.log(`  ${cyan}◆${reset} Most correct: ${bold(byCorrectness.id)} (avg ${colorScore(byCorrectness.avg)})`)
+  }
+
+  // Fastest
+  const byLatency = providers
+    .map((id) => {
+      const runs = successResults.filter((r) => r.providerId === id)
+      const avg = average(runs.map((r) => r.raw.latencyMs))
+      return { id, avg: avg ?? Infinity }
+    })
+    .sort((a, b) => a.avg - b.avg)[0]
+
+  if (byLatency && byLatency.avg !== Infinity) {
+    console.log(`  ${cyan}◆${reset} Fastest: ${bold(byLatency.id)} (avg ${Math.round(byLatency.avg)}ms)`)
+  }
+
+  // Cheapest
+  const byCost = providers
+    .map((id) => {
+      const runs = successResults.filter((r) => r.providerId === id)
+      const costs = runs
+        .map((r) => {
+          const s = r.scores.find((s) => s.name === 'cost')
+          return s && s.value >= 0 ? s.value : undefined
+        })
+        .filter((c): c is number => c !== undefined)
+      const avg = costs.length > 0 ? costs.reduce((a, b) => a + b, 0) / costs.length : undefined
+      return { id, avg }
+    })
+    .filter((p) => p.avg !== undefined)
+    .sort((a, b) => a.avg! - b.avg!)[0]
+
+  if (byCost?.avg !== undefined) {
+    console.log(`  ${cyan}◆${reset} Cheapest: ${bold(byCost.id)} (avg ${formatCost(byCost.avg)})`)
+  }
+
+  console.log('')
+}
+
+function rankProviders(results: BenchmarkResult[], providers: string[], scorerName: string) {
+  const ranked = providers
+    .map((id) => {
+      const runs = results.filter((r) => r.providerId === id)
+      const scores = runs
+        .flatMap((r) => r.scores.filter((s) => s.name === scorerName && s.value >= 0))
+        .map((s) => s.value)
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : undefined
+      return { id, avg }
+    })
+    .filter((p) => p.avg !== undefined)
+    .sort((a, b) => b.avg! - a.avg!)
+
+  return ranked[0] ? { id: ranked[0].id, avg: ranked[0].avg! } : undefined
+}
+
+interface Col {
   label: string
   width: number
+  align: 'left' | 'right'
 }
 
 interface AggregatedDetails {
@@ -181,11 +266,6 @@ function average(nums: number[]): number | undefined {
   return nums.reduce((a, b) => a + b, 0) / nums.length
 }
 
-function formatCorrectness(value: number | undefined): string {
-  if (value === undefined) return '—'
-  return `${Math.round(value * 100)}%`
-}
-
 function formatCost(usd: number | undefined): string {
   if (usd === undefined) return '—'
   if (usd < 0.00001) return `~$${(usd * 1_000_000).toFixed(1)}µ`
@@ -193,14 +273,13 @@ function formatCost(usd: number | undefined): string {
   return `~$${usd.toFixed(4)}`
 }
 
-function pad(str: string, width: number): string {
+function pad(str: string, width: number, align: 'left' | 'right'): string {
+  if (align === 'right') return str.padStart(width)
   return str.padEnd(width)
 }
 
-function bold(str: string): string {
-  return `\x1b[1m${str}\x1b[0m`
-}
-
-function dim(str: string): string {
-  return `\x1b[2m${str}\x1b[0m`
+// ANSI escape codes add invisible characters — this calculates the extra length
+function colorLen(str: string): number {
+  const stripped = str.replace(/\x1b\[[0-9;]*m/g, '')
+  return str.length - stripped.length
 }

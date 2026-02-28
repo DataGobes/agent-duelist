@@ -1,0 +1,60 @@
+import Anthropic from '@anthropic-ai/sdk'
+import type { ArenaProvider, TaskInput, TaskResult } from './types.js'
+
+export interface AnthropicProviderOptions {
+  apiKey?: string
+  maxTokens?: number
+}
+
+export function anthropic(model: string, options?: AnthropicProviderOptions): ArenaProvider {
+  const client = new Anthropic({
+    apiKey: options?.apiKey ?? process.env.ANTHROPIC_API_KEY,
+  })
+
+  const maxTokens = options?.maxTokens ?? 1024
+
+  return {
+    id: `anthropic/${model}`,
+    name: 'Anthropic',
+    model,
+
+    async run(input: TaskInput): Promise<TaskResult> {
+      const start = Date.now()
+
+      const systemMessage = input.schema
+        ? 'Respond with valid JSON matching the requested schema.'
+        : undefined
+
+      const response = await client.messages.create({
+        model,
+        max_tokens: maxTokens,
+        system: systemMessage,
+        messages: [{ role: 'user', content: input.prompt }],
+      })
+
+      const latencyMs = Date.now() - start
+
+      const textBlock = response.content.find((b) => b.type === 'text')
+      const rawContent = textBlock?.type === 'text' ? textBlock.text : ''
+
+      let output: string | Record<string, unknown> = rawContent
+      if (input.schema) {
+        try {
+          output = JSON.parse(rawContent) as Record<string, unknown>
+        } catch {
+          // fall back to raw string
+        }
+      }
+
+      return {
+        output,
+        usage: {
+          promptTokens: response.usage.input_tokens,
+          completionTokens: response.usage.output_tokens,
+        },
+        latencyMs,
+        raw: response,
+      }
+    },
+  }
+}

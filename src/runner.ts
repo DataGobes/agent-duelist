@@ -38,8 +38,8 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
             schema: task.schema,
           })
 
-          const scores = scorers.map((scorer) =>
-            scorer({ task, result: taskResult }, provider.id)
+          const scores = await Promise.all(
+            scorers.map((scorer) => scorer({ task, result: taskResult }, provider.id))
           )
 
           result = {
