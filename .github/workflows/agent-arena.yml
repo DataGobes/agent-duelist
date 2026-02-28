@@ -1,0 +1,42 @@
+# Run LLM benchmarks on demand and upload results as an artifact.
+#
+# Setup:
+#   1. Add your API keys as repository secrets (Settings > Secrets):
+#      - OPENAI_API_KEY
+#      - ANTHROPIC_API_KEY (if using Anthropic providers)
+#      - AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT (if using Azure)
+#
+#   2. Trigger manually from Actions > Agent Arena Benchmark > Run workflow.
+
+name: Agent Arena Benchmark
+
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run benchmarks
+        run: npx agent-arena run --reporter json > results.json
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Uncomment as needed:
+          # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          # AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: results.json

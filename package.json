@@ -32,6 +32,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
+    "update:pricing": "tsx scripts/update-pricing.ts",
     "prepublishOnly": "npm run build"
   },
   "engines": {
@@ -52,11 +53,21 @@
   },
   "keywords": [
     "llm",
+    "ai",
+    "agents",
     "benchmark",
-    "agent",
-    "arena",
+    "evaluation",
+    "typescript",
     "openai",
     "anthropic",
-    "testing"
-  ]
+    "arena"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DataGobes/agent-arena.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DataGobes/agent-arena/issues"
+  },
+  "homepage": "https://github.com/DataGobes/agent-arena#readme"
 }

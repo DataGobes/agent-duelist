@@ -116,13 +116,26 @@ export function consoleReporter(results: BenchmarkResult[]): void {
   // Summary section
   printSummary(results, providers)
 
-  // Errors
-  const errorCount = results.filter((r) => r.error).length
-  if (errorCount > 0) {
+  // Errors — deduplicate by provider + error message and add hints
+  const errorResults = results.filter((r) => r.error)
+  if (errorResults.length > 0) {
     console.log(`  ${bold('Errors')}`)
     console.log(`  ${dim('─'.repeat(70))}`)
-    for (const r of results.filter((r) => r.error)) {
-      console.log(`  ${red}✗${reset} ${r.providerId} × ${r.taskName} (run ${r.run}): ${r.error}`)
+
+    // Deduplicate: same provider + same error only shown once
+    const seen = new Set<string>()
+    for (const r of errorResults) {
+      const key = `${r.providerId}::${r.error}`
+      if (seen.has(key)) continue
+      seen.add(key)
+
+      const count = errorResults.filter((e) => e.providerId === r.providerId && e.error === r.error).length
+      const suffix = count > 1 ? ` (×${count})` : ''
+      console.log(`  ${red}✗${reset} ${r.providerId}: ${r.error}${suffix}`)
+
+      // Hint for common API key issues
+      const hint = apiKeyHint(r.providerId, r.error ?? '')
+      if (hint) console.log(`    ${dim(hint)}`)
     }
     console.log('')
   }
@@ -135,11 +148,13 @@ export function consoleReporter(results: BenchmarkResult[]): void {
 
 function printSummary(results: BenchmarkResult[], providers: string[]) {
   const successResults = results.filter((r) => !r.error)
-  if (successResults.length === 0 || providers.length < 2) return
+  if (successResults.length === 0) return
 
   console.log(`  ${dim('─'.repeat(70))}`)
   console.log(`  ${bold('Summary')}`)
   console.log('')
+
+  const single = providers.length === 1
 
   // Best correctness (prefer llm-judge, fallback to correctness)
   const correctnessKey = successResults.some((r) => r.scores.some((s) => s.name === 'llm-judge-correctness' && s.value >= 0))
@@ -148,7 +163,8 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
 
   const byCorrectness = rankProviders(successResults, providers, correctnessKey)
   if (byCorrectness) {
-    console.log(`  ${cyan}◆${reset} Most correct: ${bold(byCorrectness.id)} ${dim(providerLabel(byCorrectness.id))} (avg ${colorScore(byCorrectness.avg)})`)
+    const label = single ? 'Avg correctness' : `Most correct: ${bold(byCorrectness.id)} ${dim(providerLabel(byCorrectness.id))}`
+    console.log(`  ${cyan}◆${reset} ${label} (avg ${colorScore(byCorrectness.avg)})`)
   }
 
   // Fastest
@@ -161,7 +177,8 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
     .sort((a, b) => a.avg - b.avg)[0]
 
   if (byLatency && byLatency.avg !== Infinity) {
-    console.log(`  ${cyan}◆${reset} Fastest: ${bold(byLatency.id)} ${dim(providerLabel(byLatency.id))} (avg ${Math.round(byLatency.avg)}ms)`)
+    const label = single ? 'Avg latency' : `Fastest: ${bold(byLatency.id)} ${dim(providerLabel(byLatency.id))}`
+    console.log(`  ${cyan}◆${reset} ${label} (avg ${Math.round(byLatency.avg)}ms)`)
   }
 
   // Cheapest
@@ -181,7 +198,8 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
     .sort((a, b) => a.avg! - b.avg!)[0]
 
   if (byCost?.avg !== undefined) {
-    console.log(`  ${cyan}◆${reset} Cheapest: ${bold(byCost.id)} ${dim(providerLabel(byCost.id))} (avg ${formatCost(byCost.avg)})`)
+    const label = single ? 'Avg cost' : `Cheapest: ${bold(byCost.id)} ${dim(providerLabel(byCost.id))}`
+    console.log(`  ${cyan}◆${reset} ${label} (avg ${formatCost(byCost.avg)})`)
   }
 
   console.log('')
@@ -285,6 +303,23 @@ function pad(str: string, width: number, align: 'left' | 'right'): string {
 function colorLen(str: string): number {
   const stripped = str.replace(/\x1b\[[0-9;]*m/g, '')
   return str.length - stripped.length
+}
+
+function apiKeyHint(providerId: string, error: string): string | undefined {
+  const lower = error.toLowerCase()
+  const isAuthError = lower.includes('api key') || lower.includes('401') ||
+    lower.includes('unauthorized') || lower.includes('authentication') ||
+    lower.includes('incorrect api key') || lower.includes('apikey')
+
+  if (!isAuthError) return undefined
+
+  const prefix = providerId.split('/')[0]
+  switch (prefix) {
+    case 'openai': return 'Set: export OPENAI_API_KEY=sk-...'
+    case 'azure': return 'Set: export AZURE_OPENAI_API_KEY=... and AZURE_OPENAI_ENDPOINT=...'
+    case 'anthropic': return 'Set: export ANTHROPIC_API_KEY=sk-ant-...'
+    default: return `Check the API key for ${providerId}`
+  }
 }
 
 function providerLabel(providerId: string): string {
