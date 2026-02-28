@@ -10,6 +10,9 @@ export type { ArenaProvider, TaskInput, TaskResult } from './providers/types.js'
 // Tasks
 export type { ArenaTask } from './tasks/types.js'
 
+// Pricing
+export { registerPricing } from './pricing/lookup.js'
+
 // Scorers
 export type { ScoreResult, ScorerFn, BuiltInScorerName } from './scorers/types.js'
 

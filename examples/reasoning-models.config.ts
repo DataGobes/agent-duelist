@@ -16,6 +16,7 @@ export default defineArena({
       baseURL: 'http://localhost:11434/v1',
       apiKey: 'ollama',
       stripThinking: true,
+      free: true,
     }),
     openaiCompatible({
       id: 'minimax/minimax-m2.5',

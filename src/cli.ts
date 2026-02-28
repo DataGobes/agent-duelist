@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve, join, dirname } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import type { BenchmarkResult } from './runner.js'
+import type { ScoreResult } from './scorers/types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -87,7 +88,7 @@ program
             if (result.error) {
               console.log(`  ${result.providerId} × ${result.taskName}: ERROR ${result.error}`)
             } else {
-              const scores = result.scores.map((s) => `${s.name}=${s.value}`).join(' ')
+              const scores = result.scores.map((s) => `${s.name}=${formatScoreForLog(s)}`).join(' ')
               console.log(`  ${result.providerId} × ${result.taskName}: ${scores}`)
             }
           }
@@ -133,6 +134,21 @@ async function importTypeScript(filePath: string): Promise<Record<string, unknow
     console.error('Underlying error:', err instanceof Error ? err.message : err)
     process.exit(1)
   }
+}
+
+function formatScoreForLog(s: ScoreResult): string {
+  const details = s.details as Record<string, unknown> | undefined
+  if (s.name === 'latency' && details?.ms != null) {
+    return `${Math.round(details.ms as number)}ms`
+  }
+  if (s.name === 'cost' && details?.estimatedUsd != null) {
+    const usd = details.estimatedUsd as number
+    if (usd === 0) return '$0.00'
+    if (usd >= 0.01) return `~$${usd.toFixed(2)}`
+    const digits = Math.max(4, -Math.floor(Math.log10(usd)) + 1)
+    return `~$${usd.toFixed(digits).replace(/0+$/, '')}`
+  }
+  return String(s.value)
 }
 
 function getVersion(): string {

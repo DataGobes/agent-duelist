@@ -44,6 +44,10 @@ export function lookupPricing(providerId: string): ModelPricing | undefined {
   return undefined
 }
 
+export function registerPricing(providerId: string, pricing: ModelPricing): void {
+  models[providerId] = pricing
+}
+
 export function estimateCost(
   pricing: ModelPricing,
   promptTokens: number,

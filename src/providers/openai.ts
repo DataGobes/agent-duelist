@@ -1,4 +1,5 @@
 import OpenAI, { AzureOpenAI } from 'openai'
+import { registerPricing } from '../pricing/lookup.js'
 import type { ArenaProvider, TaskInput, TaskResult } from './types.js'
 
 export interface OpenAIProviderOptions {
@@ -31,6 +32,8 @@ export interface OpenAICompatibleOptions {
   apiKeyEnv?: string
   /** Strip `<think>...</think>` blocks from reasoning models (e.g. DeepSeek-R1, MiniMax M2.5) */
   stripThinking?: boolean
+  /** Mark this provider as free (e.g. local Ollama models) so it registers zero-cost pricing */
+  free?: boolean
 }
 
 export function openaiCompatible(options: OpenAICompatibleOptions): ArenaProvider {
@@ -42,6 +45,10 @@ export function openaiCompatible(options: OpenAICompatibleOptions): ArenaProvide
     apiKey,
     baseURL: options.baseURL,
   })
+
+  if (options.free) {
+    registerPricing(options.id, { inputPerToken: 0, outputPerToken: 0 })
+  }
 
   return makeProvider(options.id, options.name, options.model, client, options.model, options.stripThinking)
 }
