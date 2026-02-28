@@ -6,9 +6,9 @@
 #      - ANTHROPIC_API_KEY (if using Anthropic providers)
 #      - AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT (if using Azure)
 #
-#   2. Trigger manually from Actions > Agent Arena Benchmark > Run workflow.
+#   2. Trigger manually from Actions > Agent Duelist Benchmark > Run workflow.
 
-name: Agent Arena Benchmark
+name: Agent Duelist Benchmark
 
 on:
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
       - run: npm ci
 
       - name: Run benchmarks
-        run: npx agent-arena run --reporter json > results.json
+        run: npx duelist run --reporter json > results.json
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           # Uncomment as needed:

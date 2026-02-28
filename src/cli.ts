@@ -11,8 +11,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const program = new Command()
 
 program
-  .name('agent-arena')
-  .description('Benchmark LLM providers on agent tasks — like Vitest but for AI.')
+  .name('duelist')
+  .description('Pit LLM providers against each other on agent tasks.')
   .version(getVersion())
 
 program
@@ -43,7 +43,7 @@ program
     console.log('')
     console.log('Next steps:')
     console.log('  1. export OPENAI_API_KEY=sk-...')
-    console.log('  2. npx agent-arena run')
+    console.log('  2. npx duelist run')
   })
 
 program
@@ -58,7 +58,7 @@ program
     if (!existsSync(configPath)) {
       console.error(`Config not found: ${configPath}`)
       console.error('')
-      console.error('Create one with: npx agent-arena init')
+      console.error('Create one with: npx duelist init')
       process.exit(1)
     }
 
@@ -177,18 +177,18 @@ function getVersion(): string {
   }
 }
 
-const DEFAULT_TEMPLATE = `// ─── Agent Arena Config ─────────────────────────────────────────────
+const DEFAULT_TEMPLATE = `// ─── Agent Duelist Config ─────────────────────────────────────────────
 //
 // Set your API key before running:
 //   export OPENAI_API_KEY=sk-...
 //
 // Then run:
-//   npx agent-arena run
+//   npx duelist run
 //
-// Docs: https://github.com/DataGobes/agent-arena
+// Docs: https://github.com/DataGobes/agent-duelist
 // ─────────────────────────────────────────────────────────────────────
 
-import { defineArena, openai } from 'agent-arena'
+import { defineArena, openai } from 'agent-duelist'
 import { z } from 'zod'
 
 export default defineArena({

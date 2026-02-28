@@ -35,7 +35,7 @@ export function consoleReporter(results: BenchmarkResult[]): void {
   const runsPerCell = Math.max(...results.map((r) => r.run))
   const runLabel = runsPerCell > 1 ? ` (${runsPerCell} runs each)` : ''
   console.log('')
-  console.log(`  ${bold(`⬡ Agent Arena Results${runLabel}`)}`)
+  console.log(`  ${bold(`⬡ Agent Duelist Results${runLabel}`)}`)
   console.log(`  ${dim('─'.repeat(70))}`)
   console.log('')
 

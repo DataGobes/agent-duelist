@@ -1,15 +1,15 @@
-// ─── Agent Arena Config ─────────────────────────────────────────────
+// ─── Agent Duelist Config ────────────────────────────────────────────
 //
 // Set your API key before running:
 //   export OPENAI_API_KEY=sk-...
 //
 // Then run:
-//   npx agent-arena run
+//   npx duelist run
 //
-// Docs: https://github.com/DataGobes/agent-arena
+// Docs: https://github.com/DataGobes/agent-duelist
 // ─────────────────────────────────────────────────────────────────────
 
-import { defineArena, openai } from 'agent-arena'
+import { defineArena, openai } from 'agent-duelist'
 import { z } from 'zod'
 
 export default defineArena({

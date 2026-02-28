@@ -1,7 +1,7 @@
 {
-  "name": "agent-arena",
+  "name": "agent-duelist",
   "version": "0.1.0",
-  "description": "Vitest but for LLM agents — benchmark multiple providers on agent tasks",
+  "description": "Pit LLM providers against each other on agent tasks.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -20,7 +20,7 @@
     }
   },
   "bin": {
-    "agent-arena": "./dist/cli.js"
+    "duelist": "./dist/cli.js"
   },
   "files": [
     "dist",
@@ -60,14 +60,15 @@
     "typescript",
     "openai",
     "anthropic",
-    "arena"
+    "arena",
+    "duelist"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/DataGobes/agent-arena.git"
+    "url": "https://github.com/DataGobes/agent-duelist.git"
   },
   "bugs": {
-    "url": "https://github.com/DataGobes/agent-arena/issues"
+    "url": "https://github.com/DataGobes/agent-duelist/issues"
   },
-  "homepage": "https://github.com/DataGobes/agent-arena#readme"
+  "homepage": "https://github.com/DataGobes/agent-duelist#readme"
 }

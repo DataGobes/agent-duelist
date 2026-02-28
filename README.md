@@ -1,8 +1,10 @@
-# agent-arena
+# agent-duelist
 
-> Benchmark LLM **providers** on real **agent tasks** - Vitest, but for agents.
+> Pit LLM providers against each other on agent tasks — Duel your models.
 
-`agent-arena` is a TypeScript-first framework to pit multiple LLM providers against each other on the same tasks and get structured, reproducible results: correctness, latency, tokens, and cost.
+`agent-duelist` is a TypeScript-first framework to pit multiple LLM providers against each other on the same tasks and get structured, reproducible results: correctness, latency, tokens, and cost.
+
+> **Note:** This project was previously called `agent-arena`.
 
 - Compare OpenAI, Azure OpenAI, Anthropic, and any OpenAI-compatible gateway.
 - Define tasks once, run them against many providers.
@@ -10,24 +12,24 @@
 
 ---
 
-## Why agent-arena?
+## Why agent-duelist?
 
 - **Provider-agnostic**: One config, many providers. Swap models and gateways without rewriting your tasks.
 - **Agent-focused**: Designed for agent workflows and tool use, not just single-turn prompts.
 - **Realistic metrics**: Latency, token counts, and cost estimates based on a pricing catalog.
 - **TypeScript-native DX**: Strongly typed APIs, Zod schemas for structured outputs, and a simple `defineArena()` entrypoint.
-- **CLI-first**: `npx agent-arena init` → `npx agent-arena run` gets you from zero to useful table in minutes.
+- **CLI-first**: `npx duelist init` → `npx duelist run` gets you from zero to useful table in minutes.
 
 ---
 
 ## Installation
 
 ```bash
-npm install agent-arena
+npm install agent-duelist
 # or
-pnpm add agent-arena
+pnpm add agent-duelist
 # or
-yarn add agent-arena
+yarn add agent-duelist
 ```
 
 You'll also need API keys for the providers you want to benchmark, for example:
@@ -45,14 +47,14 @@ export ANTHROPIC_API_KEY=...
 Initialize a config:
 
 ```bash
-npx agent-arena init
+npx duelist init
 ```
 
 This creates `arena.config.ts` in your project. A minimal example:
 
 ```ts
 // arena.config.ts
-import { defineArena, openai, azureOpenai } from 'agent-arena'
+import { defineArena, openai, azureOpenai } from 'agent-duelist'
 import { z } from 'zod'
 
 export default defineArena({
@@ -85,7 +87,7 @@ export default defineArena({
 Run the benchmark:
 
 ```bash
-npx agent-arena run
+npx duelist run
 ```
 
 You'll see a matrix like:
@@ -97,7 +99,7 @@ You'll see a matrix like:
 For CI or further processing:
 
 ```bash
-npx agent-arena run --reporter json > results.json
+npx duelist run --reporter json > results.json
 ```
 
 ---
@@ -123,7 +125,7 @@ import {
   anthropic,
   openaiCompatible,
   type ArenaProvider,
-} from 'agent-arena'
+} from 'agent-duelist'
 
 const oai = openai('gpt-4o')
 
@@ -210,7 +212,7 @@ Configure them in your arena:
 scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity']
 ```
 
-The `llm-judge-correctness` scorer requires a judge model and will use `gpt-4o-mini` by default. Configure via `AGENT_ARENA_JUDGE_MODEL` and `AGENT_ARENA_JUDGE_PROVIDER` env vars (`openai` or `azure-openai`).
+The `llm-judge-correctness` scorer requires a judge model and will use `gpt-4o-mini` by default. Configure via `DUELIST_JUDGE_MODEL` and `DUELIST_JUDGE_PROVIDER` env vars (`openai` or `azure-openai`).
 
 You can also add custom scorers for domain-specific metrics (e.g. tool-call correctness, safety, style).
 
@@ -224,7 +226,7 @@ Cost estimation is intentionally transparent and conservative:
    Providers return token usage (prompt and completion tokens) in each `TaskResult`. These are treated as the source of truth.
 
 2. **Pricing catalog**  
-   `agent-arena` ships with a **locally bundled catalog** of per-token prices for many models, derived from OpenRouter's public pricing pages.
+   `agent-duelist` ships with a **locally bundled catalog** of per-token prices for many models, derived from OpenRouter's public pricing pages.
 
    - The catalog maps `(provider, model)` → `{ inputPerM, outputPerM }` in USD per 1M tokens.
    - Azure OpenAI models are resolved back to their base OpenAI models where possible (e.g. `azure/gpt-4o` → `openai/gpt-4o`) so you don't need to configure Azure pricing manually.
@@ -258,16 +260,16 @@ Basic commands:
 
 ```bash
 # Scaffold a new config
-npx agent-arena init
+npx duelist init
 
 # Run with the default config (arena.config.ts)
-npx agent-arena run
+npx duelist run
 
 # Use a custom config
-npx agent-arena run --config path/to/arena.config.ts
+npx duelist run --config path/to/arena.config.ts
 
 # Get JSON instead of a table
-npx agent-arena run --reporter json
+npx duelist run --reporter json
 ```
 
 Options (subject to change as the project evolves):
@@ -285,7 +287,7 @@ Here's a richer example comparing multiple providers across tasks:
 
 ```ts
 // arena.config.ts
-import { defineArena, azureOpenai } from 'agent-arena'
+import { defineArena, azureOpenai } from 'agent-duelist'
 import { z } from 'zod'
 
 export default defineArena({
@@ -322,13 +324,13 @@ export default defineArena({
 ```
 
 ```bash
-npx agent-arena run
+npx duelist run
 ```
 
 Output:
 
 ```
-  ⬡ Agent Arena Results (3 runs each)
+  ⬡ Agent Duelist Results (3 runs each)
   ──────────────────────────────────────────────────────────────────────
 
   Task: extract-company

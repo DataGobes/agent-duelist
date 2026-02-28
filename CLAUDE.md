@@ -1,6 +1,6 @@
-# agent-arena
+# agent-duelist
 
-Vitest but for LLM agents — benchmark multiple providers on agent tasks.
+Pit LLM providers against each other on agent tasks.
 
 ## Quick reference
 

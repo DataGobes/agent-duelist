@@ -27,7 +27,7 @@ function getJudgeClient(): OpenAI | undefined {
       apiKey: process.env.AZURE_OPENAI_API_KEY,
       endpoint: process.env.AZURE_OPENAI_ENDPOINT,
       apiVersion: process.env.AZURE_OPENAI_API_VERSION ?? '2024-12-01-preview',
-      deployment: process.env.AGENT_ARENA_JUDGE_MODEL ?? 'gpt-4o-mini',
+      deployment: process.env.DUELIST_JUDGE_MODEL ?? 'gpt-4o-mini',
     })
     return clientInstance
   }
@@ -37,7 +37,7 @@ function getJudgeClient(): OpenAI | undefined {
 }
 
 function getJudgeModel(): string {
-  return process.env.AGENT_ARENA_JUDGE_MODEL ?? 'gpt-4o-mini'
+  return process.env.DUELIST_JUDGE_MODEL ?? 'gpt-4o-mini'
 }
 
 /**
