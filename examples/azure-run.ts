@@ -7,7 +7,7 @@
  * Reads AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT from .env automatically.
  */
 import 'dotenv/config'
-import { defineArena, azureOpenai, consoleReporter } from '../src/index.js'
+import { defineArena, azureOpenai, consoleReporter } from 'agent-duelist'
 import { z } from 'zod'
 
 const arena = defineArena({

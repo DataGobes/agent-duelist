@@ -7,7 +7,7 @@
  * Requires GOOGLE_API_KEY, AZURE_OPENAI_API_KEY + AZURE_OPENAI_ENDPOINT,
  * and MINIMAX_API_KEY in .env.
  */
-import { defineArena, gemini, azureOpenai, openaiCompatible } from '../src/index.js'
+import { defineArena, gemini, azureOpenai, openaiCompatible } from 'agent-duelist'
 import { z } from 'zod'
 
 export default defineArena({

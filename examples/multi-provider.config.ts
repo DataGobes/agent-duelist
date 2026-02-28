@@ -6,7 +6,7 @@
  *
  * Reads API keys from .env automatically.
  */
-import { defineArena, azureOpenai, openaiCompatible } from '../src/index.js'
+import { defineArena, azureOpenai, openaiCompatible } from 'agent-duelist'
 import { z } from 'zod'
 
 // Use multiple deployments from Azure to compare models

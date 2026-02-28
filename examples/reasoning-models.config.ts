@@ -4,7 +4,7 @@
  * Run with:
  *   npx tsx examples/run-reasoning.ts
  */
-import { defineArena, openaiCompatible } from '../src/index.js'
+import { defineArena, openaiCompatible } from 'agent-duelist'
 import { z } from 'zod'
 
 export default defineArena({

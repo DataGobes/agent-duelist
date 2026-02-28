@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import arena from './reasoning-models.config.js'
-import { consoleReporter } from '../src/index.js'
+import { consoleReporter } from 'agent-duelist'
 
 const results = await arena.run({
   onResult(result) {

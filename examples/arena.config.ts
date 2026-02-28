@@ -2,7 +2,7 @@
  * Example arena config — run with:
  *   OPENAI_API_KEY=sk-... npx tsx examples/run.ts
  */
-import { defineArena, openai } from '../src/index.js'
+import { defineArena, openai } from 'agent-duelist'
 import { z } from 'zod'
 
 export default defineArena({
