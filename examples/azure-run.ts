@@ -4,8 +4,9 @@
  * Run with:
  *   npx tsx examples/azure-run.ts
  *
- * Requires env vars: AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT
+ * Reads AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT from .env automatically.
  */
+import 'dotenv/config'
 import { defineArena, azureOpenai, consoleReporter } from '../src/index.js'
 import { z } from 'zod'
 

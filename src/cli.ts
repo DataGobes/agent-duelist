@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { Command } from 'commander'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve, join, dirname } from 'node:path'
