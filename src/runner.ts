@@ -7,6 +7,7 @@ export interface BenchmarkResult {
   taskName: string
   run: number
   scores: ScoreResult[]
+  error?: string
   raw: {
     output: string | Record<string, unknown>
     latencyMs: number
@@ -29,25 +30,40 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
   for (const task of tasks) {
     for (const provider of providers) {
       for (let run = 1; run <= runs; run++) {
-        const taskResult = await provider.run({
-          prompt: task.prompt,
-          schema: task.schema,
-        })
+        let result: BenchmarkResult
 
-        const scores = scorers.map((scorer) =>
-          scorer({ task, result: taskResult }, provider.id)
-        )
+        try {
+          const taskResult = await provider.run({
+            prompt: task.prompt,
+            schema: task.schema,
+          })
 
-        const result: BenchmarkResult = {
-          providerId: provider.id,
-          taskName: task.name,
-          run,
-          scores,
-          raw: {
-            output: taskResult.output,
-            latencyMs: taskResult.latencyMs,
-            usage: taskResult.usage,
-          },
+          const scores = scorers.map((scorer) =>
+            scorer({ task, result: taskResult }, provider.id)
+          )
+
+          result = {
+            providerId: provider.id,
+            taskName: task.name,
+            run,
+            scores,
+            raw: {
+              output: taskResult.output,
+              latencyMs: taskResult.latencyMs,
+              usage: taskResult.usage,
+            },
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+
+          result = {
+            providerId: provider.id,
+            taskName: task.name,
+            run,
+            scores: [],
+            error: message,
+            raw: { output: '', latencyMs: 0 },
+          }
         }
 
         results.push(result)

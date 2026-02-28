@@ -12,9 +12,8 @@ const models = catalog.models as Record<string, ModelPricing>
  *
  * Resolution order:
  *   1. Exact match on provider ID
- *   2. Strip provider prefix, try "openai/{model}" (Azure deployments map to OpenAI models)
- *   3. Fuzzy: find any catalog key ending with the model name
- *   4. undefined (no pricing available)
+ *   2. Strip provider prefix, try "openai/{model}" (covers Azure deployments)
+ *   3. undefined (no pricing available)
  */
 export function lookupPricing(providerId: string): ModelPricing | undefined {
   // 1. Exact match
@@ -26,11 +25,6 @@ export function lookupPricing(providerId: string): ModelPricing | undefined {
   // 2. Try as openai/{model} (covers azure/* deployments)
   const asOpenai = `openai/${model}`
   if (models[asOpenai]) return models[asOpenai]
-
-  // 3. Fuzzy: any key ending with /{model}
-  const suffix = `/${model}`
-  const match = Object.keys(models).find((k) => k.endsWith(suffix))
-  if (match) return models[match]
 
   return undefined
 }

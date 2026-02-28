@@ -12,6 +12,6 @@ export interface ScorerContext {
   result: TaskResult
 }
 
-export type ScorerFn = (ctx: ScorerContext, providerId?: string) => ScoreResult
+export type ScorerFn = (ctx: ScorerContext, providerId: string) => ScoreResult
 
 export type BuiltInScorerName = 'latency' | 'cost' | 'correctness'

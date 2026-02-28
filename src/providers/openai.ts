@@ -44,15 +44,23 @@ export function openaiCompatible(options: OpenAICompatibleOptions): ArenaProvide
   return makeProvider(options.id, options.name, options.model, client, options.model)
 }
 
-export function azureOpenai(deployment: string, options?: AzureOpenAIProviderOptions): ArenaProvider {
+/**
+ * Create an Azure OpenAI provider.
+ *
+ * @param model - The model or deployment name (e.g. "gpt-4o", "gpt-5-mini").
+ *   Used as the deployment name unless `options.deployment` overrides it.
+ */
+export function azureOpenai(model: string, options?: AzureOpenAIProviderOptions): ArenaProvider {
+  const deployment = options?.deployment ?? model
+
   const client = new AzureOpenAI({
     apiKey: options?.apiKey ?? process.env.AZURE_OPENAI_API_KEY,
     endpoint: options?.endpoint ?? process.env.AZURE_OPENAI_ENDPOINT,
     apiVersion: options?.apiVersion ?? process.env.AZURE_OPENAI_API_VERSION ?? '2024-12-01-preview',
-    deployment: options?.deployment ?? deployment,
+    deployment,
   })
 
-  return makeProvider(`azure/${deployment}`, 'Azure OpenAI', deployment, client, deployment)
+  return makeProvider(`azure/${model}`, 'Azure OpenAI', model, client, deployment)
 }
 
 function makeProvider(

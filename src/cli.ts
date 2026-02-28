@@ -2,6 +2,7 @@ import { Command } from 'commander'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve, join, dirname } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
+import type { BenchmarkResult } from './runner.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -77,15 +78,17 @@ program
         process.exit(1)
       }
 
-      const typedArena = arena as { run: (opts?: { onResult?: (r: unknown) => void }) => Promise<unknown[]> }
+      const typedArena = arena as { run: (opts?: { onResult?: (r: BenchmarkResult) => void }) => Promise<BenchmarkResult[]> }
 
       // Only show live progress for console reporter
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const onResult = opts.reporter === 'console'
-        ? (result: any) => {
-            const scores = (result.scores as Array<{ name: string; value: number }>)
-              .map((s: { name: string; value: number }) => `${s.name}=${s.value}`).join(' ')
-            console.log(`  ${result.providerId} × ${result.taskName}: ${scores}`)
+        ? (result: BenchmarkResult) => {
+            if (result.error) {
+              console.log(`  ${result.providerId} × ${result.taskName}: ERROR ${result.error}`)
+            } else {
+              const scores = result.scores.map((s) => `${s.name}=${s.value}`).join(' ')
+              console.log(`  ${result.providerId} × ${result.taskName}: ${scores}`)
+            }
           }
         : undefined
 
@@ -95,10 +98,10 @@ program
       const { jsonReporter } = await import('./reporter/json.js')
 
       if (opts.reporter === 'json') {
-        console.log(jsonReporter(results as never))
+        console.log(jsonReporter(results))
       } else {
         console.log('')
-        consoleReporter(results as never)
+        consoleReporter(results)
       }
     } catch (err) {
       console.error('Failed to run benchmarks:')

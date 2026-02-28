@@ -1,12 +1,12 @@
 import type { ScorerFn } from './types.js'
 import { lookupPricing, estimateCost } from '../pricing/lookup.js'
 
-export const costScorer: ScorerFn = ({ task: _task, result }, providerId) => {
+export const costScorer: ScorerFn = ({ result }, providerId) => {
   const promptTokens = result.usage?.promptTokens ?? 0
   const completionTokens = result.usage?.completionTokens ?? 0
   const totalTokens = promptTokens + completionTokens
 
-  const pricing = providerId ? lookupPricing(providerId) : undefined
+  const pricing = lookupPricing(providerId)
 
   if (!pricing) {
     return {

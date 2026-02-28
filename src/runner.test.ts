@@ -16,6 +16,17 @@ function mockProvider(id: string, output: string | Record<string, unknown>): Are
   }
 }
 
+function failingProvider(id: string): ArenaProvider {
+  return {
+    id,
+    name: 'Failing',
+    model: 'fail-1',
+    async run() {
+      throw new Error('API key invalid')
+    },
+  }
+}
+
 describe('runBenchmarks', () => {
   it('runs all provider × task combinations', async () => {
     const providers = [mockProvider('a', 'hello'), mockProvider('b', 'hello')]
@@ -60,5 +71,40 @@ describe('runBenchmarks', () => {
     })
 
     expect(received).toEqual(['a'])
+  })
+
+  it('catches provider errors without aborting other benchmarks', async () => {
+    const results = await runBenchmarks({
+      providers: [failingProvider('bad'), mockProvider('good', 'ok')],
+      tasks: [{ name: 't', prompt: 'test' }],
+      scorers: [latencyScorer],
+      runs: 1,
+    })
+
+    expect(results).toHaveLength(2)
+    expect(results[0]!.error).toBe('API key invalid')
+    expect(results[0]!.scores).toEqual([])
+    expect(results[1]!.error).toBeUndefined()
+    expect(results[1]!.scores.length).toBeGreaterThan(0)
+  })
+
+  it('records error message for non-Error throws', async () => {
+    const provider: ArenaProvider = {
+      id: 'weird',
+      name: 'Weird',
+      model: 'x',
+      async run() {
+        throw 'string error'
+      },
+    }
+
+    const results = await runBenchmarks({
+      providers: [provider],
+      tasks: [{ name: 't', prompt: 'test' }],
+      scorers: [latencyScorer],
+      runs: 1,
+    })
+
+    expect(results[0]!.error).toBe('string error')
   })
 })
