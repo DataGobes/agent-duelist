@@ -4,20 +4,22 @@ import { costScorer } from './cost.js'
 import { correctnessScorer } from './correctness.js'
 import { schemaCorrectnessScorer } from './schema-correctness.js'
 import { fuzzySimilarityScorer } from './fuzzy-similarity.js'
-import { llmJudgeScorerAsync } from './llm-judge.js'
+import { createLlmJudgeScorer } from './llm-judge.js'
 
-const builtInScorers: Record<BuiltInScorerName, ScorerFn> = {
+const staticScorers: Partial<Record<BuiltInScorerName, ScorerFn>> = {
   latency: latencyScorer,
   cost: costScorer,
   correctness: correctnessScorer,
   'schema-correctness': schemaCorrectnessScorer,
   'fuzzy-similarity': fuzzySimilarityScorer,
-  'llm-judge-correctness': llmJudgeScorerAsync,
 }
 
-export function resolveScorers(names: BuiltInScorerName[]): ScorerFn[] {
+export function resolveScorers(names: BuiltInScorerName[], judgeModel?: string): ScorerFn[] {
   return names.map((name) => {
-    const scorer = builtInScorers[name]
+    if (name === 'llm-judge-correctness') {
+      return createLlmJudgeScorer(judgeModel)
+    }
+    const scorer = staticScorers[name]
     if (!scorer) {
       throw new Error(`Unknown scorer: "${name}"`)
     }

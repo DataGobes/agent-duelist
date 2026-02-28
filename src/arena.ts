@@ -11,6 +11,8 @@ export interface ArenaConfig {
   tasks: ArenaTask[]
   scorers?: BuiltInScorerName[]
   runs?: number
+  /** Model to use for llm-judge-correctness (e.g. 'gemini-3.1-pro-preview'). Falls back to DUELIST_JUDGE_MODEL env var, then gpt-4o-mini. */
+  judgeModel?: string
 }
 
 export interface RunOptions {
@@ -32,7 +34,7 @@ export function defineArena(config: ArenaConfig): Arena {
   }
 
   const scorerNames = config.scorers ?? ['latency', 'cost', 'correctness']
-  const scorerFns = resolveScorers(scorerNames)
+  const scorerFns = resolveScorers(scorerNames, config.judgeModel)
   const runs = config.runs ?? 1
 
   return {

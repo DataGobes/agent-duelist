@@ -47,6 +47,7 @@ export default defineArena({
     },
   ],
 
-  scorers: ['latency', 'cost', 'correctness', 'fuzzy-similarity'],
+  scorers: ['latency', 'cost', 'correctness', 'llm-judge-correctness'],
+  judgeModel: 'gemini-3.1-pro-preview',
   runs: 1,
 })
