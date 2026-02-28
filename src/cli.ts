@@ -46,8 +46,8 @@ program
   .command('run')
   .description('Run the arena benchmarks')
   .option('-c, --config <path>', 'Path to config file', 'arena.config.ts')
-  .option('--json', 'Output results as JSON')
-  .action(async (opts: { config: string; json?: boolean }) => {
+  .option('--reporter <type>', 'Output format: console (default) or json', 'console')
+  .action(async (opts: { config: string; reporter: string }) => {
     const configPath = resolve(opts.config)
 
     if (!existsSync(configPath)) {
@@ -56,13 +56,16 @@ program
       process.exit(1)
     }
 
+    if (!['console', 'json'].includes(opts.reporter)) {
+      console.error(`Unknown reporter: "${opts.reporter}". Use "console" or "json".`)
+      process.exit(1)
+    }
+
     try {
-      // Use tsx or ts-node to handle .ts configs, or native import for .js
       const configUrl = pathToFileURL(configPath).href
       let mod: Record<string, unknown>
 
       if (configPath.endsWith('.ts')) {
-        // Try to load via tsx/ts-node register hook, or compile on the fly
         mod = await importTypeScript(configPath)
       } else {
         mod = (await import(configUrl)) as Record<string, unknown>
@@ -74,11 +77,28 @@ program
         process.exit(1)
       }
 
-      const { jsonReporter } = await import('./reporter/json.js')
-      const results = await (arena as { run: () => Promise<unknown[]> }).run()
+      const typedArena = arena as { run: (opts?: { onResult?: (r: unknown) => void }) => Promise<unknown[]> }
 
-      if (opts.json) {
+      // Only show live progress for console reporter
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const onResult = opts.reporter === 'console'
+        ? (result: any) => {
+            const scores = (result.scores as Array<{ name: string; value: number }>)
+              .map((s: { name: string; value: number }) => `${s.name}=${s.value}`).join(' ')
+            console.log(`  ${result.providerId} × ${result.taskName}: ${scores}`)
+          }
+        : undefined
+
+      const results = await typedArena.run({ onResult })
+
+      const { consoleReporter } = await import('./reporter/console.js')
+      const { jsonReporter } = await import('./reporter/json.js')
+
+      if (opts.reporter === 'json') {
         console.log(jsonReporter(results as never))
+      } else {
+        console.log('')
+        consoleReporter(results as never)
       }
     } catch (err) {
       console.error('Failed to run benchmarks:')
@@ -90,9 +110,7 @@ program
 program.parse()
 
 async function importTypeScript(filePath: string): Promise<Record<string, unknown>> {
-  // Strategy: use Node's --import with tsx if available, otherwise use jiti
   try {
-    // Attempt tsx register (works if tsx is installed)
     // @ts-expect-error tsx may not be installed
     await import('tsx/esm/api')
   } catch {
@@ -100,17 +118,15 @@ async function importTypeScript(filePath: string): Promise<Record<string, unknow
   }
 
   try {
-    // Try dynamic import with tsx loaded
     const url = pathToFileURL(filePath).href
     return (await import(url)) as Record<string, unknown>
-  } catch {
-    // Fall back: read the file as text, do a minimal transpile
-    // For v0.1, require the user to have tsx installed or use a .js config
+  } catch (err) {
     console.error(
       'Cannot import .ts config directly. Install tsx as a dev dependency:\n' +
       '  npm install -D tsx\n' +
-      'Or rename your config to arena.config.js'
+      'Or rename your config to arena.config.js\n'
     )
+    console.error('Underlying error:', err instanceof Error ? err.message : err)
     process.exit(1)
   }
 }

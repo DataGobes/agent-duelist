@@ -34,7 +34,7 @@ describe('defineArena', () => {
     expect(typeof arena.run).toBe('function')
   })
 
-  it('run() returns benchmark results', async () => {
+  it('run() returns benchmark results without printing', async () => {
     const arena = defineArena({
       providers: [mockProvider('a')],
       tasks: [{ name: 't', prompt: 'p' }],
@@ -45,5 +45,17 @@ describe('defineArena', () => {
     expect(results).toHaveLength(1)
     expect(results[0]!.providerId).toBe('a')
     expect(results[0]!.scores.length).toBeGreaterThan(0)
+  })
+
+  it('run() calls onResult callback', async () => {
+    const arena = defineArena({
+      providers: [mockProvider('a')],
+      tasks: [{ name: 't', prompt: 'p' }],
+      scorers: ['latency'],
+    })
+
+    const ids: string[] = []
+    await arena.run({ onResult: (r) => ids.push(r.providerId) })
+    expect(ids).toEqual(['a'])
   })
 })

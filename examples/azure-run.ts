@@ -6,7 +6,7 @@
  *
  * Requires env vars: AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT
  */
-import { defineArena, azureOpenai } from '../src/index.js'
+import { defineArena, azureOpenai, consoleReporter } from '../src/index.js'
 import { z } from 'zod'
 
 const arena = defineArena({
@@ -33,5 +33,13 @@ const arena = defineArena({
   runs: 1,
 })
 
-const results = await arena.run()
-console.log(`\nCompleted ${results.length} benchmark(s).`)
+const results = await arena.run({
+  onResult(result) {
+    const scores = result.scores.map((s) => `${s.name}=${s.value}`).join(' ')
+    console.log(`  ${result.providerId} × ${result.taskName}: ${scores}`)
+  },
+})
+
+console.log('')
+consoleReporter(results)
+console.log(`Completed ${results.length} benchmark(s).`)

@@ -25,6 +25,28 @@ describe('correctnessScorer', () => {
     expect(score.value).toBe(1)
   })
 
+  it('returns 1 for matching objects regardless of key order', () => {
+    const score = correctnessScorer(
+      ctx({ company: 'Acme', year: 2024 }, { year: 2024, company: 'Acme' })
+    )
+    expect(score.value).toBe(1)
+  })
+
+  it('returns 1 for matching nested objects regardless of key order', () => {
+    const score = correctnessScorer(
+      ctx(
+        { meta: { b: 2, a: 1 }, name: 'x' },
+        { name: 'x', meta: { a: 1, b: 2 } },
+      )
+    )
+    expect(score.value).toBe(1)
+  })
+
+  it('returns 1 for matching arrays', () => {
+    const score = correctnessScorer(ctx([1, 2, 3], [1, 2, 3]))
+    expect(score.value).toBe(1)
+  })
+
   it('returns 0 for mismatched objects', () => {
     const score = correctnessScorer(ctx({ company: 'Acme' }, { company: 'Beta' }))
     expect(score.value).toBe(0)

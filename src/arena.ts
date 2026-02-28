@@ -13,9 +13,14 @@ export interface ArenaConfig {
   runs?: number
 }
 
+export interface RunOptions {
+  /** Called after each individual benchmark completes */
+  onResult?: (result: BenchmarkResult) => void
+}
+
 export interface Arena {
   config: ArenaConfig
-  run(): Promise<BenchmarkResult[]>
+  run(options?: RunOptions): Promise<BenchmarkResult[]>
 }
 
 export function defineArena(config: ArenaConfig): Arena {
@@ -33,22 +38,14 @@ export function defineArena(config: ArenaConfig): Arena {
   return {
     config,
 
-    async run(): Promise<BenchmarkResult[]> {
-      const results = await runBenchmarks({
+    async run(options?: RunOptions): Promise<BenchmarkResult[]> {
+      return runBenchmarks({
         providers: config.providers,
         tasks: config.tasks,
         scorers: scorerFns,
         runs,
-        onResult(result) {
-          const scores = result.scores.map((s) => `${s.name}=${s.value}`).join(' ')
-          console.log(`  ${result.providerId} × ${result.taskName}: ${scores}`)
-        },
+        onResult: options?.onResult,
       })
-
-      console.log('')
-      consoleReporter(results)
-
-      return results
     },
   }
 }
