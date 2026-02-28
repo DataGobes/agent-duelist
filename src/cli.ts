@@ -116,7 +116,6 @@ program.parse()
 
 async function importTypeScript(filePath: string): Promise<Record<string, unknown>> {
   try {
-    // @ts-expect-error tsx may not be installed
     await import('tsx/esm/api')
   } catch {
     // tsx not available — ignore
