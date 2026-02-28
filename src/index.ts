@@ -6,10 +6,10 @@ export type { ArenaConfig, Arena } from './arena.js'
 export { openai, azureOpenai, openaiCompatible } from './providers/openai.js'
 export { anthropic } from './providers/anthropic.js'
 export { gemini } from './providers/gemini.js'
-export type { ArenaProvider, TaskInput, TaskResult } from './providers/types.js'
+export type { ArenaProvider, TaskInput, TaskResult, ToolCall } from './providers/types.js'
 
 // Tasks
-export type { ArenaTask } from './tasks/types.js'
+export type { ArenaTask, ToolDefinition } from './tasks/types.js'
 
 // Pricing
 export { registerPricing } from './pricing/lookup.js'

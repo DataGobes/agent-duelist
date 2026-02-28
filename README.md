@@ -380,12 +380,50 @@ Output:
 
 ---
 
+## Tool-calling agent example
+
+agent-duelist supports tool-calling tasks — define tools with handlers, and the provider will execute them during the benchmark:
+
+```ts
+import { defineArena, openai } from 'agent-duelist'
+import { z } from 'zod'
+
+const weatherTool = {
+  name: 'getCurrentWeather',
+  description: 'Get the current weather in a given city',
+  parameters: z.object({ city: z.string() }),
+  handler: async ({ city }: { city: string }) => ({
+    city,
+    tempC: 20,
+  }),
+}
+
+export default defineArena({
+  providers: [openai('gpt-4o')],
+  tasks: [
+    {
+      name: 'weather-tool-call',
+      prompt: 'What is the current temperature in Amsterdam? Use the tool.',
+      expected: { city: 'Amsterdam' },
+      tools: [weatherTool],
+    },
+  ],
+  scorers: ['latency', 'cost', 'tool-usage'],
+  runs: 1,
+})
+```
+
+The model calls `getCurrentWeather`, the handler returns a stub result, and the `tool-usage` scorer reports whether the expected tool was invoked. Tool calls and their results are included in the JSON output for inspection.
+
+---
+
 ## Roadmap
 
 Shipped so far:
 
 - OpenAI, Azure OpenAI, Anthropic, Google Gemini, and OpenAI-compatible providers
-- 6 built-in scorers including LLM-as-judge, schema validation, and fuzzy similarity
+- 7 built-in scorers including LLM-as-judge, tool-usage, schema validation, and fuzzy similarity
+- Tool-calling support with local handlers for agent task benchmarking
 - Colored console reporter with per-task tables and cross-provider summary
 - JSON reporter for CI/pipeline integration
 - Pricing catalog from OpenRouter with refresh script
@@ -398,7 +436,7 @@ Planned directions (subject to community feedback):
   - Markdown/HTML/CSV reports.
   - GitHub Actions summaries.
 - **Agent workflows**
-  - Multi-step tasks, tool-use evaluation, and agent traces.
+  - Multi-step tool chains, multi-hop reasoning, and agent traces.
 - **Plugin system**
   - First-class support for user-defined providers and scorers.
 - **Embedding-based scoring**

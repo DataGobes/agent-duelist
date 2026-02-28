@@ -1,8 +1,16 @@
 import type { ZodSchema } from 'zod'
+import type { ToolDefinition } from '../tasks/types.js'
+
+export interface ToolCall {
+  name: string
+  arguments: unknown
+  result?: unknown
+}
 
 export interface TaskInput {
   prompt: string
   schema?: ZodSchema
+  tools?: ToolDefinition[]
 }
 
 export interface TaskResult {
@@ -13,6 +21,7 @@ export interface TaskResult {
   }
   latencyMs: number
   raw?: unknown
+  toolCalls?: ToolCall[]
 }
 
 export interface ArenaProvider {

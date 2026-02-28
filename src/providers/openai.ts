@@ -1,6 +1,8 @@
 import OpenAI, { AzureOpenAI } from 'openai'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import { registerPricing } from '../pricing/lookup.js'
-import type { ArenaProvider, TaskInput, TaskResult } from './types.js'
+import type { ToolDefinition } from '../tasks/types.js'
+import type { ArenaProvider, TaskInput, TaskResult, ToolCall } from './types.js'
 
 export interface OpenAIProviderOptions {
   apiKey?: string
@@ -102,11 +104,65 @@ export function makeProvider(
         ]
       }
 
+      // If tools are provided, convert to OpenAI tool format
+      if (input.tools?.length) {
+        params.tools = input.tools.map(toolDefToOpenAI)
+        params.tool_choice = 'auto'
+      }
+
       const response = await client.chat.completions.create(params)
-      const latencyMs = Date.now() - start
+      let totalPromptTokens = response.usage?.prompt_tokens ?? 0
+      let totalCompletionTokens = response.usage?.completion_tokens ?? 0
 
       const choice = response.choices[0]
-      let rawContent = choice?.message?.content ?? ''
+      const toolCallsRaw = choice?.message?.tool_calls
+      const collectedToolCalls: ToolCall[] = []
+      let finalResponse = response
+
+      // If the model made tool calls, execute handlers and send results back
+      if (toolCallsRaw?.length && input.tools?.length) {
+        const toolMessages: OpenAI.ChatCompletionMessageParam[] = [
+          ...params.messages,
+          choice!.message,
+        ]
+
+        for (const tc of toolCallsRaw) {
+          const toolDef = input.tools.find((t) => t.name === tc.function.name)
+          let args: unknown
+          try {
+            args = JSON.parse(tc.function.arguments)
+          } catch {
+            args = tc.function.arguments
+          }
+
+          let result: unknown
+          if (toolDef?.handler) {
+            result = await toolDef.handler(args)
+          }
+
+          collectedToolCalls.push({ name: tc.function.name, arguments: args, result })
+
+          toolMessages.push({
+            role: 'tool' as const,
+            tool_call_id: tc.id,
+            content: JSON.stringify(result ?? {}),
+          })
+        }
+
+        // Follow-up call with tool results
+        const followUp = await client.chat.completions.create({
+          model: requestModel,
+          messages: toolMessages,
+        })
+
+        totalPromptTokens += followUp.usage?.prompt_tokens ?? 0
+        totalCompletionTokens += followUp.usage?.completion_tokens ?? 0
+        finalResponse = followUp
+      }
+
+      const latencyMs = Date.now() - start
+      const finalChoice = finalResponse.choices[0]
+      let rawContent = finalChoice?.message?.content ?? ''
 
       if (stripThinking) {
         rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>\s*/, '')
@@ -124,12 +180,24 @@ export function makeProvider(
       return {
         output,
         usage: {
-          promptTokens: response.usage?.prompt_tokens,
-          completionTokens: response.usage?.completion_tokens,
+          promptTokens: totalPromptTokens || undefined,
+          completionTokens: totalCompletionTokens || undefined,
         },
         latencyMs,
-        raw: response,
+        raw: finalResponse,
+        toolCalls: collectedToolCalls.length > 0 ? collectedToolCalls : undefined,
       }
+    },
+  }
+}
+
+function toolDefToOpenAI(tool: ToolDefinition): OpenAI.ChatCompletionTool {
+  return {
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: zodToJsonSchema(tool.parameters, { target: 'openAi' }) as Record<string, unknown>,
     },
   }
 }

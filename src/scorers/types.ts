@@ -21,3 +21,4 @@ export type BuiltInScorerName =
   | 'schema-correctness'
   | 'fuzzy-similarity'
   | 'llm-judge-correctness'
+  | 'tool-usage'

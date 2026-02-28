@@ -1,4 +1,4 @@
-import type { ArenaProvider } from './providers/types.js'
+import type { ArenaProvider, ToolCall } from './providers/types.js'
 import type { ArenaTask } from './tasks/types.js'
 import type { ScoreResult, ScorerFn } from './scorers/types.js'
 
@@ -12,6 +12,7 @@ export interface BenchmarkResult {
     output: string | Record<string, unknown>
     latencyMs: number
     usage?: { promptTokens?: number; completionTokens?: number }
+    toolCalls?: ToolCall[]
   }
 }
 
@@ -36,6 +37,7 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
           const taskResult = await provider.run({
             prompt: task.prompt,
             schema: task.schema,
+            tools: task.tools,
           })
 
           const scores = await Promise.all(
@@ -51,6 +53,7 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
               output: taskResult.output,
               latencyMs: taskResult.latencyMs,
               usage: taskResult.usage,
+              toolCalls: taskResult.toolCalls,
             },
           }
         } catch (err) {

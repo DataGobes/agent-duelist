@@ -5,6 +5,7 @@ import { correctnessScorer } from './correctness.js'
 import { schemaCorrectnessScorer } from './schema-correctness.js'
 import { fuzzySimilarityScorer } from './fuzzy-similarity.js'
 import { createLlmJudgeScorer } from './llm-judge.js'
+import { toolUsageScorer } from './tool-usage.js'
 
 const staticScorers: Partial<Record<BuiltInScorerName, ScorerFn>> = {
   latency: latencyScorer,
@@ -12,6 +13,7 @@ const staticScorers: Partial<Record<BuiltInScorerName, ScorerFn>> = {
   correctness: correctnessScorer,
   'schema-correctness': schemaCorrectnessScorer,
   'fuzzy-similarity': fuzzySimilarityScorer,
+  'tool-usage': toolUsageScorer,
 }
 
 export function resolveScorers(names: BuiltInScorerName[], judgeModel?: string): ScorerFn[] {

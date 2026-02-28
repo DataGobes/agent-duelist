@@ -55,6 +55,7 @@ export function consoleReporter(results: BenchmarkResult[]): void {
       else if (name === 'schema-correctness') cols.push({ label: 'Schema', width: 8, align: 'right' })
       else if (name === 'fuzzy-similarity') cols.push({ label: 'Fuzzy', width: 8, align: 'right' })
       else if (name === 'llm-judge-correctness') cols.push({ label: 'Judge', width: 8, align: 'right' })
+      else if (name === 'tool-usage') cols.push({ label: 'Tool', width: 8, align: 'right' })
       else cols.push({ label: name, width: 10, align: 'right' })
     }
     if (hasErrors) cols.push({ label: 'Status', width: 8, align: 'left' })
