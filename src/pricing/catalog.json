@@ -1,0 +1,521 @@
+{
+  "_meta": {
+    "source": "OpenRouter API (https://openrouter.ai/api/v1/models)",
+    "updatedAt": "2026-02-28",
+    "unit": "USD per token"
+  },
+  "models": {
+    "anthropic/claude-3-haiku": {
+      "inputPerToken": 2.5e-7,
+      "outputPerToken": 0.00000125
+    },
+    "anthropic/claude-3.5-haiku": {
+      "inputPerToken": 8e-7,
+      "outputPerToken": 0.000004
+    },
+    "anthropic/claude-3.5-sonnet": {
+      "inputPerToken": 0.000006,
+      "outputPerToken": 0.00003
+    },
+    "anthropic/claude-3.7-sonnet": {
+      "inputPerToken": 0.000003,
+      "outputPerToken": 0.000015
+    },
+    "anthropic/claude-3.7-sonnet:thinking": {
+      "inputPerToken": 0.000003,
+      "outputPerToken": 0.000015
+    },
+    "anthropic/claude-haiku-4.5": {
+      "inputPerToken": 0.000001,
+      "outputPerToken": 0.000005
+    },
+    "anthropic/claude-opus-4": {
+      "inputPerToken": 0.000015,
+      "outputPerToken": 0.000075
+    },
+    "anthropic/claude-opus-4.1": {
+      "inputPerToken": 0.000015,
+      "outputPerToken": 0.000075
+    },
+    "anthropic/claude-opus-4.5": {
+      "inputPerToken": 0.000005,
+      "outputPerToken": 0.000025
+    },
+    "anthropic/claude-opus-4.6": {
+      "inputPerToken": 0.000005,
+      "outputPerToken": 0.000025
+    },
+    "anthropic/claude-sonnet-4": {
+      "inputPerToken": 0.000003,
+      "outputPerToken": 0.000015
+    },
+    "anthropic/claude-sonnet-4.5": {
+      "inputPerToken": 0.000003,
+      "outputPerToken": 0.000015
+    },
+    "anthropic/claude-sonnet-4.6": {
+      "inputPerToken": 0.000003,
+      "outputPerToken": 0.000015
+    },
+    "deepseek/deepseek-chat": {
+      "inputPerToken": 3.2e-7,
+      "outputPerToken": 8.9e-7
+    },
+    "deepseek/deepseek-chat-v3-0324": {
+      "inputPerToken": 2e-7,
+      "outputPerToken": 7.7e-7
+    },
+    "deepseek/deepseek-chat-v3.1": {
+      "inputPerToken": 1.5e-7,
+      "outputPerToken": 7.5e-7
+    },
+    "deepseek/deepseek-r1": {
+      "inputPerToken": 7e-7,
+      "outputPerToken": 0.0000025
+    },
+    "deepseek/deepseek-r1-0528": {
+      "inputPerToken": 4.5e-7,
+      "outputPerToken": 0.00000215
+    },
+    "deepseek/deepseek-r1-distill-llama-70b": {
+      "inputPerToken": 7e-7,
+      "outputPerToken": 8e-7
+    },
+    "deepseek/deepseek-r1-distill-qwen-32b": {
+      "inputPerToken": 2.9e-7,
+      "outputPerToken": 2.9e-7
+    },
+    "deepseek/deepseek-v3": {
+      "inputPerToken": 3e-7,
+      "outputPerToken": 8.8e-7
+    },
+    "deepseek/deepseek-v3.1-terminus": {
+      "inputPerToken": 2.1e-7,
+      "outputPerToken": 7.9e-7
+    },
+    "deepseek/deepseek-v3.1-terminus:exacto": {
+      "inputPerToken": 2.1e-7,
+      "outputPerToken": 7.9e-7
+    },
+    "deepseek/deepseek-v3.2": {
+      "inputPerToken": 2.5e-7,
+      "outputPerToken": 4e-7
+    },
+    "deepseek/deepseek-v3.2-exp": {
+      "inputPerToken": 2.7e-7,
+      "outputPerToken": 4.1e-7
+    },
+    "deepseek/deepseek-v3.2-speciale": {
+      "inputPerToken": 4e-7,
+      "outputPerToken": 0.0000012
+    },
+    "google/gemini-2.0-flash": {
+      "inputPerToken": 1e-7,
+      "outputPerToken": 4e-7
+    },
+    "google/gemini-2.0-flash-001": {
+      "inputPerToken": 1e-7,
+      "outputPerToken": 4e-7
+    },
+    "google/gemini-2.0-flash-lite-001": {
+      "inputPerToken": 7.5e-8,
+      "outputPerToken": 3e-7
+    },
+    "google/gemini-2.5-flash": {
+      "inputPerToken": 3e-7,
+      "outputPerToken": 0.0000025
+    },
+    "google/gemini-2.5-flash-image": {
+      "inputPerToken": 3e-7,
+      "outputPerToken": 0.0000025
+    },
+    "google/gemini-2.5-flash-lite": {
+      "inputPerToken": 1e-7,
+      "outputPerToken": 4e-7
+    },
+    "google/gemini-2.5-flash-lite-preview-09-2025": {
+      "inputPerToken": 1e-7,
+      "outputPerToken": 4e-7
+    },
+    "google/gemini-2.5-pro": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "google/gemini-2.5-pro-preview": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "google/gemini-2.5-pro-preview-05-06": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "google/gemini-3-flash-preview": {
+      "inputPerToken": 5e-7,
+      "outputPerToken": 0.000003
+    },
+    "google/gemini-3-pro-image-preview": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000012
+    },
+    "google/gemini-3-pro-preview": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000012
+    },
+    "google/gemini-3.1-flash-image-preview": {
+      "inputPerToken": 2.5e-7,
+      "outputPerToken": 0.0000015
+    },
+    "google/gemini-3.1-pro-preview": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000012
+    },
+    "google/gemini-3.1-pro-preview-customtools": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000012
+    },
+    "meta/llama-3-70b-instruct": {
+      "inputPerToken": 5.1e-7,
+      "outputPerToken": 7.4e-7
+    },
+    "meta/llama-3-8b-instruct": {
+      "inputPerToken": 3e-8,
+      "outputPerToken": 4e-8
+    },
+    "meta/llama-3.1-405b": {
+      "inputPerToken": 0.000004,
+      "outputPerToken": 0.000004
+    },
+    "meta/llama-3.1-405b-instruct": {
+      "inputPerToken": 0.000004,
+      "outputPerToken": 0.000004
+    },
+    "meta/llama-3.1-70b-instruct": {
+      "inputPerToken": 4e-7,
+      "outputPerToken": 4e-7
+    },
+    "meta/llama-3.1-8b-instruct": {
+      "inputPerToken": 2e-8,
+      "outputPerToken": 5e-8
+    },
+    "meta/llama-3.2-11b-vision-instruct": {
+      "inputPerToken": 4.9e-8,
+      "outputPerToken": 4.9e-8
+    },
+    "meta/llama-3.2-1b-instruct": {
+      "inputPerToken": 2.7e-8,
+      "outputPerToken": 2e-7
+    },
+    "meta/llama-3.2-3b-instruct": {
+      "inputPerToken": 2e-8,
+      "outputPerToken": 2e-8
+    },
+    "meta/llama-3.3-70b": {
+      "inputPerToken": 1.2e-7,
+      "outputPerToken": 3e-7
+    },
+    "meta/llama-3.3-70b-instruct": {
+      "inputPerToken": 1e-7,
+      "outputPerToken": 3.2e-7
+    },
+    "meta/llama-4-maverick": {
+      "inputPerToken": 1.5e-7,
+      "outputPerToken": 6e-7
+    },
+    "meta/llama-4-scout": {
+      "inputPerToken": 8e-8,
+      "outputPerToken": 3e-7
+    },
+    "meta/llama-guard-2-8b": {
+      "inputPerToken": 2e-7,
+      "outputPerToken": 2e-7
+    },
+    "meta/llama-guard-3-8b": {
+      "inputPerToken": 2e-8,
+      "outputPerToken": 6e-8
+    },
+    "meta/llama-guard-4-12b": {
+      "inputPerToken": 1.8e-7,
+      "outputPerToken": 1.8e-7
+    },
+    "mistral/mistral-7b-instruct": {
+      "inputPerToken": 2e-7,
+      "outputPerToken": 2e-7
+    },
+    "mistral/mistral-7b-instruct-v0.1": {
+      "inputPerToken": 1.1e-7,
+      "outputPerToken": 1.9e-7
+    },
+    "mistral/mistral-7b-instruct-v0.3": {
+      "inputPerToken": 2e-7,
+      "outputPerToken": 2e-7
+    },
+    "mistral/mistral-large": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000006
+    },
+    "mistral/mistral-large-2407": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000006
+    },
+    "mistral/mistral-large-2411": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000006
+    },
+    "mistral/mistral-large-2512": {
+      "inputPerToken": 5e-7,
+      "outputPerToken": 0.0000015
+    },
+    "mistral/mistral-medium-3": {
+      "inputPerToken": 4e-7,
+      "outputPerToken": 0.000002
+    },
+    "mistral/mistral-medium-3.1": {
+      "inputPerToken": 4e-7,
+      "outputPerToken": 0.000002
+    },
+    "mistral/mistral-nemo": {
+      "inputPerToken": 2e-8,
+      "outputPerToken": 4e-8
+    },
+    "mistral/mistral-saba": {
+      "inputPerToken": 2e-7,
+      "outputPerToken": 6e-7
+    },
+    "mistral/mistral-small": {
+      "inputPerToken": 1e-7,
+      "outputPerToken": 3e-7
+    },
+    "mistral/mistral-small-24b-instruct-2501": {
+      "inputPerToken": 5e-8,
+      "outputPerToken": 8e-8
+    },
+    "mistral/mistral-small-3.1-24b-instruct": {
+      "inputPerToken": 3.5e-7,
+      "outputPerToken": 5.6e-7
+    },
+    "mistral/mistral-small-3.2-24b-instruct": {
+      "inputPerToken": 6e-8,
+      "outputPerToken": 1.8e-7
+    },
+    "mistral/mistral-small-creative": {
+      "inputPerToken": 1e-7,
+      "outputPerToken": 3e-7
+    },
+    "openai/gpt-3.5-turbo": {
+      "inputPerToken": 5e-7,
+      "outputPerToken": 0.0000015
+    },
+    "openai/gpt-3.5-turbo-0613": {
+      "inputPerToken": 0.000001,
+      "outputPerToken": 0.000002
+    },
+    "openai/gpt-3.5-turbo-16k": {
+      "inputPerToken": 0.000003,
+      "outputPerToken": 0.000004
+    },
+    "openai/gpt-3.5-turbo-instruct": {
+      "inputPerToken": 0.0000015,
+      "outputPerToken": 0.000002
+    },
+    "openai/gpt-4": {
+      "inputPerToken": 0.00003,
+      "outputPerToken": 0.00006
+    },
+    "openai/gpt-4-0314": {
+      "inputPerToken": 0.00003,
+      "outputPerToken": 0.00006
+    },
+    "openai/gpt-4-1106-preview": {
+      "inputPerToken": 0.00001,
+      "outputPerToken": 0.00003
+    },
+    "openai/gpt-4-turbo": {
+      "inputPerToken": 0.00001,
+      "outputPerToken": 0.00003
+    },
+    "openai/gpt-4-turbo-preview": {
+      "inputPerToken": 0.00001,
+      "outputPerToken": 0.00003
+    },
+    "openai/gpt-4.1": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000008
+    },
+    "openai/gpt-4.1-mini": {
+      "inputPerToken": 4e-7,
+      "outputPerToken": 0.0000016
+    },
+    "openai/gpt-4.1-nano": {
+      "inputPerToken": 1e-7,
+      "outputPerToken": 4e-7
+    },
+    "openai/gpt-4o": {
+      "inputPerToken": 0.0000025,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-4o-2024-05-13": {
+      "inputPerToken": 0.000005,
+      "outputPerToken": 0.000015
+    },
+    "openai/gpt-4o-2024-08-06": {
+      "inputPerToken": 0.0000025,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-4o-2024-11-20": {
+      "inputPerToken": 0.0000025,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-4o-audio-preview": {
+      "inputPerToken": 0.0000025,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-4o-mini": {
+      "inputPerToken": 1.5e-7,
+      "outputPerToken": 6e-7
+    },
+    "openai/gpt-4o-mini-2024-07-18": {
+      "inputPerToken": 1.5e-7,
+      "outputPerToken": 6e-7
+    },
+    "openai/gpt-4o-mini-search-preview": {
+      "inputPerToken": 1.5e-7,
+      "outputPerToken": 6e-7
+    },
+    "openai/gpt-4o-search-preview": {
+      "inputPerToken": 0.0000025,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-4o:extended": {
+      "inputPerToken": 0.000006,
+      "outputPerToken": 0.000018
+    },
+    "openai/gpt-5": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-5-chat": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-5-codex": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-5-image": {
+      "inputPerToken": 0.00001,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-5-image-mini": {
+      "inputPerToken": 0.0000025,
+      "outputPerToken": 0.000002
+    },
+    "openai/gpt-5-mini": {
+      "inputPerToken": 2.5e-7,
+      "outputPerToken": 0.000002
+    },
+    "openai/gpt-5-nano": {
+      "inputPerToken": 5e-8,
+      "outputPerToken": 4e-7
+    },
+    "openai/gpt-5-pro": {
+      "inputPerToken": 0.000015,
+      "outputPerToken": 0.00012
+    },
+    "openai/gpt-5.1": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-5.1-chat": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-5.1-codex": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-5.1-codex-max": {
+      "inputPerToken": 0.00000125,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-5.1-codex-mini": {
+      "inputPerToken": 2.5e-7,
+      "outputPerToken": 0.000002
+    },
+    "openai/gpt-5.2": {
+      "inputPerToken": 0.00000175,
+      "outputPerToken": 0.000014
+    },
+    "openai/gpt-5.2-chat": {
+      "inputPerToken": 0.00000175,
+      "outputPerToken": 0.000014
+    },
+    "openai/gpt-5.2-codex": {
+      "inputPerToken": 0.00000175,
+      "outputPerToken": 0.000014
+    },
+    "openai/gpt-5.2-pro": {
+      "inputPerToken": 0.000021,
+      "outputPerToken": 0.000168
+    },
+    "openai/gpt-5.3-codex": {
+      "inputPerToken": 0.00000175,
+      "outputPerToken": 0.000014
+    },
+    "openai/gpt-audio": {
+      "inputPerToken": 0.0000025,
+      "outputPerToken": 0.00001
+    },
+    "openai/gpt-audio-mini": {
+      "inputPerToken": 6e-7,
+      "outputPerToken": 0.0000024
+    },
+    "openai/gpt-oss-120b": {
+      "inputPerToken": 3.9e-8,
+      "outputPerToken": 1.9e-7
+    },
+    "openai/gpt-oss-120b:exacto": {
+      "inputPerToken": 3.9e-8,
+      "outputPerToken": 1.9e-7
+    },
+    "openai/gpt-oss-20b": {
+      "inputPerToken": 3e-8,
+      "outputPerToken": 1.4e-7
+    },
+    "openai/gpt-oss-safeguard-20b": {
+      "inputPerToken": 7.5e-8,
+      "outputPerToken": 3e-7
+    },
+    "openai/o1-pro": {
+      "inputPerToken": 0.00015,
+      "outputPerToken": 0.0006
+    },
+    "openai/o3-deep-research": {
+      "inputPerToken": 0.00001,
+      "outputPerToken": 0.00004
+    },
+    "openai/o3-mini": {
+      "inputPerToken": 0.0000011,
+      "outputPerToken": 0.0000044
+    },
+    "openai/o3-mini-high": {
+      "inputPerToken": 0.0000011,
+      "outputPerToken": 0.0000044
+    },
+    "openai/o3-pro": {
+      "inputPerToken": 0.00002,
+      "outputPerToken": 0.00008
+    },
+    "openai/o4-mini": {
+      "inputPerToken": 0.0000011,
+      "outputPerToken": 0.0000044
+    },
+    "openai/o4-mini-deep-research": {
+      "inputPerToken": 0.000002,
+      "outputPerToken": 0.000008
+    },
+    "openai/o4-mini-high": {
+      "inputPerToken": 0.0000011,
+      "outputPerToken": 0.0000044
+    }
+  }
+}
