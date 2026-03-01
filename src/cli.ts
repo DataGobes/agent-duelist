@@ -79,7 +79,7 @@ program
         console.log(jsonReporter(results))
       } else {
         console.log('')
-        consoleReporter(results, { sparklines: typedArena.config.sparklines })
+        consoleReporter(results, { sparklines: typedArena.config?.sparklines })
       }
 
       // Exit with non-zero if every single result errored
