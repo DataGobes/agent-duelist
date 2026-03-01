@@ -117,7 +117,6 @@ interface TableCol {
   width: number
   align: 'left' | 'right'
   statsKey?: string
-  isScore?: boolean
 }
 
 function computeColumnStats(
@@ -333,7 +332,7 @@ export function consoleReporter(results: BenchmarkResult[], options?: ConsoleRep
           : name === 'llm-judge-correctness' ? 'Judge'
           : name === 'tool-usage' ? 'Tool'
           : name
-        cols.push({ label, width: showSparklines ? 15 : 8, align: 'right', statsKey: name, isScore: true })
+        cols.push({ label, width: showSparklines ? 15 : 8, align: 'right', statsKey: name })
       }
     }
 
