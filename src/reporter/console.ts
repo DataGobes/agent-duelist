@@ -243,7 +243,9 @@ function computeMedals(
     if (i > 0 && sorted[i]![1] < sorted[i - 1]![1]) {
       rank = i
     }
-    medals.set(sorted[i]![0], rank < medalList.length ? medalList[rank]! : '')
+    // No medal for providers with zero column wins
+    const hasWins = sorted[i]![1] > 0
+    medals.set(sorted[i]![0], hasWins && rank < medalList.length ? medalList[rank]! : '')
   }
 
   return medals
