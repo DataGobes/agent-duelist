@@ -90,16 +90,16 @@ export function createLlmJudgeScorer(judgeModel?: string, timeoutMs = REQUEST_TI
     const { client, model } = cached
 
     const prompt = JUDGE_PROMPT
-      .replaceAll('{task}', task.prompt)
-      .replaceAll('{expected}', JSON.stringify(task.expected))
-      .replaceAll('{actual}', JSON.stringify(result.output))
+      .replace('{task}', task.prompt)
+      .replace('{expected}', JSON.stringify(task.expected))
+      .replace('{actual}', JSON.stringify(result.output))
 
     try {
       const response = await client.chat.completions.create({
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0,
-        max_tokens: 512,
+        max_tokens: 2048,
       })
 
       const content = response.choices[0]?.message?.content?.trim() ?? ''
