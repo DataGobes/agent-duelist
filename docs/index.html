@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agent Duelist – Stop Choosing LLM Providers by Vibes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Benchmark LLM providers on your real agent tasks. Compare correctness, latency, and cost across OpenAI, Anthropic, Gemini, and more." />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-deep: #020617;
+      --panel: rgba(15, 23, 42, 0.85);
+      --accent: #f59e0b;
+      --accent-soft: rgba(245, 158, 11, 0.15);
+      --accent-glow: rgba(245, 158, 11, 0.35);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --border: rgba(148, 163, 184, 0.15);
+      --green: #22c55e;
+      --red: #ef4444;
+      --radius: 12px;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+      --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    /* === Animated gradient mesh background === */
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .bg-mesh::before,
+    .bg-mesh::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.4;
+    }
+    .bg-mesh::before {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(245,158,11,0.18), transparent 70%);
+      top: -10%; left: -5%;
+      animation: meshDrift1 18s ease-in-out infinite alternate;
+    }
+    .bg-mesh::after {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(139,92,246,0.12), transparent 70%);
+      bottom: -10%; right: -5%;
+      animation: meshDrift2 22s ease-in-out infinite alternate;
+    }
+    .bg-mesh-extra {
+      position: absolute;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.3;
+      background: radial-gradient(circle, rgba(56,189,248,0.12), transparent 70%);
+      top: 50%; left: 60%;
+      animation: meshDrift3 15s ease-in-out infinite alternate;
+    }
+    @keyframes meshDrift1 {
+      from { transform: translate(0, 0) scale(1); }
+      to { transform: translate(80px, 60px) scale(1.15); }
+    }
+    @keyframes meshDrift2 {
+      from { transform: translate(0, 0) scale(1); }
+      to { transform: translate(-60px, -50px) scale(1.1); }
+    }
+    @keyframes meshDrift3 {
+      from { transform: translate(0, 0) scale(1); }
+      to { transform: translate(-40px, 40px) scale(1.2); }
+    }
+
+    /* === Deck container === */
+    .deck {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1060px;
+      height: 90vh;
+      max-height: 680px;
+      border-radius: 20px;
+      background: linear-gradient(145deg, rgba(15,23,42,0.95), rgba(2,6,23,0.98));
+      border: 1px solid var(--border);
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.3),
+        0 25px 80px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.03);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      margin: 20px;
+    }
+
+    /* === Header === */
+    .deck-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent-soft), rgba(245,158,11,0.05));
+      border: 1px solid rgba(245,158,11,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .version-chip {
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(245,158,11,0.25);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+    }
+
+    /* === Slides === */
+    .slides-viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: 32px 28px 20px;
+      display: grid;
+      gap: 24px;
+      align-items: start;
+      opacity: 0;
+      transform: translateX(60px);
+      transition: opacity 250ms ease, transform 250ms ease;
+      pointer-events: none;
+      overflow-y: auto;
+    }
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+    .slide.exit-left {
+      opacity: 0;
+      transform: translateX(-60px);
+    }
+    .slide-2col {
+      grid-template-columns: 1.2fr 1fr;
+    }
+    .slide-1col {
+      grid-template-columns: 1fr;
+    }
+
+    /* === Panels === */
+    .panel {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--panel);
+      padding: 24px;
+      height: 100%;
+    }
+    .panel-accent {
+      border-color: rgba(245,158,11,0.2);
+      background:
+        radial-gradient(circle at 0 0, rgba(245,158,11,0.08), transparent 60%),
+        var(--panel);
+    }
+
+    /* === Typography === */
+    h1 {
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    p, li {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    p { margin-bottom: 10px; }
+    ul { padding-left: 18px; margin-bottom: 10px; }
+    li { margin-bottom: 4px; }
+    .accent { color: var(--accent); }
+    .green { color: var(--green); }
+    .red { color: var(--red); }
+    strong { color: var(--text); font-weight: 600; }
+
+    .hero-tagline {
+      font-size: 15px;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+
+    /* === Inline code === */
+    code {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    /* === Terminal blocks === */
+    .terminal {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      border-radius: 10px;
+      background: var(--bg-deep);
+      border: 1px solid rgba(148,163,184,0.1);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .terminal-chrome {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      background: rgba(15,23,42,0.6);
+      border-bottom: 1px solid rgba(148,163,184,0.08);
+    }
+    .terminal-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+    .terminal-dot.r { background: #ef4444; }
+    .terminal-dot.y { background: #eab308; }
+    .terminal-dot.g { background: #22c55e; }
+    .terminal-title {
+      margin-left: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .terminal-body {
+      padding: 14px 16px;
+    }
+    .t-line {
+      white-space: pre;
+      min-height: 1.6em;
+    }
+    .t-dim { color: #64748b; }
+    .t-accent { color: var(--accent); }
+    .t-green { color: var(--green); }
+    .t-red { color: var(--red); }
+    .t-bold { color: var(--text); font-weight: 600; }
+    .t-muted { color: var(--muted); }
+
+    /* === Pain cards === */
+    .pain-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .pain-card {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.2);
+    }
+    .pain-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+    .pain-card h3 { margin-bottom: 2px; }
+    .pain-card p { margin-bottom: 0; font-size: 13px; }
+
+    /* === Scorer grid === */
+    .scorer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .scorer-card {
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.2);
+    }
+    .scorer-card-icon {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+    .scorer-card h3 { font-size: 13px; margin-bottom: 4px; }
+    .scorer-card p { font-size: 12px; margin-bottom: 0; }
+
+    /* === Provider grid === */
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .provider-chip {
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    .provider-chip .icon { font-size: 24px; display: block; margin-bottom: 6px; }
+    .provider-chip .name { font-size: 13px; color: var(--text); font-weight: 500; }
+    .provider-chip .model { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* === PR comment mockup === */
+    .pr-mockup {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .pr-header {
+      padding: 12px 16px;
+      background: rgba(15,23,42,0.5);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .pr-avatar {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-soft), rgba(245,158,11,0.05));
+      border: 1px solid rgba(245,158,11,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .pr-body {
+      padding: 16px;
+      font-size: 13px;
+    }
+    .pr-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-family: var(--mono);
+      margin-top: 10px;
+    }
+    .pr-table th, .pr-table td {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .pr-table th {
+      background: rgba(15,23,42,0.5);
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* === CTA buttons === */
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .cta-btn:hover { transform: translateY(-1px); }
+    .cta-primary {
+      background: linear-gradient(135deg, var(--accent), #d97706);
+      color: #0f172a;
+      box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+    }
+    .cta-primary:hover { box-shadow: 0 6px 24px rgba(245,158,11,0.4); }
+    .cta-secondary {
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+      color: var(--accent);
+    }
+
+    /* === Footer / nav === */
+    .deck-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 28px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .nav-hint {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 150ms ease, color 150ms ease;
+    }
+    .nav-btn:hover {
+      border-color: rgba(245,158,11,0.4);
+      color: var(--text);
+    }
+    .nav-btn.primary {
+      border-color: rgba(245,158,11,0.4);
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+    }
+    .dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(148,163,184,0.3);
+      transition: all 200ms ease;
+      cursor: pointer;
+    }
+    .dot.active {
+      width: 20px;
+      border-radius: 10px;
+      background: var(--accent);
+    }
+
+    /* === Typing cursor blink === */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .cursor {
+      display: inline-block;
+      width: 7px;
+      height: 14px;
+      background: var(--accent);
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+      margin-left: 2px;
+    }
+
+    /* === Responsive === */
+    @media (max-width: 800px) {
+      .deck {
+        height: 100vh;
+        max-height: none;
+        border-radius: 0;
+        margin: 0;
+      }
+      .slide { padding: 20px 18px 16px; }
+      .slide-2col {
+        grid-template-columns: 1fr;
+      }
+      .slide-2col > :nth-child(2) { display: none; }
+      h1 { font-size: 26px; }
+      h2 { font-size: 18px; }
+      .scorer-grid { grid-template-columns: 1fr 1fr; }
+      .provider-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-mesh"><div class="bg-mesh-extra"></div></div>
+
+<div class="deck">
+  <div class="deck-header">
+    <div class="logo">
+      <div class="logo-icon">&#9876;&#65039;</div>
+      <span>Agent Duelist</span>
+    </div>
+    <div class="version-chip">Open Source</div>
+  </div>
+
+  <div class="slides-viewport">
+
+    <!-- ====== SLIDE 1: Hero ====== -->
+    <section class="slide slide-2col active" data-slide="0">
+      <div class="panel">
+        <p class="hero-tagline">Stop choosing LLM providers by vibes.</p>
+        <h1>Benchmark providers on <span class="accent">your real agent tasks</span>.</h1>
+        <p>
+          Agent Duelist is a TypeScript library and CLI that pits OpenAI, Anthropic, Gemini, Azure, and any
+          OpenAI-compatible provider against each other — on the exact prompts and schemas your agents run.
+        </p>
+        <ul>
+          <li>One config file. Every provider. Real data.</li>
+          <li>Measure <strong>correctness</strong>, <strong>latency</strong>, <strong>tokens</strong>, and <strong>cost</strong> per task.</li>
+          <li>Built-in scorers + LLM-as-judge + custom metrics.</li>
+          <li>Drop into CI — quality gates for your prompts.</li>
+        </ul>
+        <div style="margin-top: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <code>npx duelist init</code>
+          <span style="color: var(--muted);">&#8594;</span>
+          <code>npx duelist run</code>
+        </div>
+      </div>
+      <div class="panel panel-accent">
+        <div class="terminal">
+          <div class="terminal-chrome">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+            <span class="terminal-title">duelist run</span>
+          </div>
+          <div class="terminal-body">
+            <div class="t-line t-dim">$ npx duelist run</div>
+            <div class="t-line t-dim">gpt-5-mini &#215; extract-company: 820ms $0.00014 &#10003;</div>
+            <div class="t-line t-dim">claude-sonnet-4.6 &#215; extract-company: 650ms $0.00018 &#10003;</div>
+            <div class="t-line t-dim">gemini-3-flash-preview &#215; extract-company: 440ms $0.00006 &#10003;</div>
+            <div class="t-line">&nbsp;</div>
+            <div class="t-line t-accent">&#9654; Agent Duelist Results</div>
+            <div class="t-line t-green">  Most correct:  claude-sonnet-4.6 (avg 98%)</div>
+            <div class="t-line t-green">  Fastest:       gemini-3-flash-preview (avg 440ms)</div>
+            <div class="t-line t-green">  Cheapest:      gemini-3-flash-preview (avg $0.00006)</div>
+          </div>
+        </div>
+        <div style="margin-top: 16px;">
+          <p style="font-size: 12px; margin-bottom: 0;">
+            Readable tables and a clear winner — not 6 browser tabs of docs.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SLIDE 2: The Problem ====== -->
+    <section class="slide slide-2col" data-slide="1">
+      <div class="panel">
+        <h2>The problem</h2>
+        <p>Everyone says "just switch providers." Nobody can show you data.</p>
+        <div class="pain-cards">
+          <div class="pain-card">
+            <div class="pain-icon">&#127922;</div>
+            <div>
+              <h3>Gut-feel model choice</h3>
+              <p>Provider selection is lobby-chat anecdotes and Twitter hype, not evidence.</p>
+            </div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-icon">&#128202;</div>
+            <div>
+              <h3>Generic benchmarks</h3>
+              <p>Leaderboards test trivia. You need metrics on <em>your</em> prompts and schemas.</p>
+            </div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-icon">&#128176;</div>
+            <div>
+              <h3>Invisible costs</h3>
+              <p>Token costs surface on the bill, not during development. Latency? Who knows.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel panel-accent">
+        <h2>What teams actually need</h2>
+        <ul>
+          <li>Run the <strong>same tasks</strong> across multiple providers, side by side.</li>
+          <li>Metrics that match reality: <strong>correctness, latency, tokens, cost</strong>.</li>
+          <li>Support for <strong>tools and structured outputs</strong> — agents, not just chat.</li>
+          <li>Something you can <strong>drop into CI</strong> and re-run as models change.</li>
+          <li>Data you can paste into a PR, not a meeting.</li>
+        </ul>
+        <p style="margin-top: 14px;">
+          Agent Duelist is closer to <span class="accent">Vitest for LLM providers</span> than another lab leaderboard.
+        </p>
+      </div>
+    </section>
+
+    <!-- ====== SLIDE 3: The Solution ====== -->
+    <section class="slide slide-2col" data-slide="2">
+      <div class="panel">
+        <h2>One config. Every provider. Real data.</h2>
+        <p>
+          Define an arena with providers, tasks, and scorers. Run all combinations.
+          Collect structured results. Ship with confidence.
+        </p>
+        <ul>
+          <li><strong>Providers</strong> — any OpenAI-compatible endpoint, or built-in factories for OpenAI, Azure, Anthropic, Gemini.</li>
+          <li><strong>Tasks</strong> — your actual prompts, schemas, tools, and expected outputs.</li>
+          <li><strong>Scorers</strong> — built-in (latency, cost, correctness) or custom functions.</li>
+          <li><strong>Reporters</strong> — console tables, JSON, or markdown for PR comments.</li>
+        </ul>
+        <p>
+          You keep full code ownership: runs in your project, your CI, your API keys.
+        </p>
+      </div>
+      <div class="panel panel-accent">
+        <h2 style="margin-bottom: 14px;">In code</h2>
+        <div class="terminal">
+          <div class="terminal-chrome">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+            <span class="terminal-title">arena.config.ts</span>
+          </div>
+          <div class="terminal-body">
+<div class="t-line t-dim">import { defineArena, openai, anthropic } from "agent-duelist"</div>
+<div class="t-line t-dim">import { z } from "zod"</div>
+<div class="t-line">&nbsp;</div>
+<div class="t-line">export default <span class="t-accent">defineArena</span>({</div>
+<div class="t-line">  providers: [</div>
+<div class="t-line">    openai(<span class="t-green">"gpt-5-mini"</span>),</div>
+<div class="t-line">    anthropic(<span class="t-green">"claude-sonnet-4.6"</span>),</div>
+<div class="t-line">  ],</div>
+<div class="t-line">  tasks: [{</div>
+<div class="t-line">    name: <span class="t-green">"extract-company"</span>,</div>
+<div class="t-line">    prompt: <span class="t-green">"Extract the company..."</span>,</div>
+<div class="t-line">    schema: z.object({</div>
+<div class="t-line">      company: z.string()</div>
+<div class="t-line">    }),</div>
+<div class="t-line">    expected: { company: <span class="t-green">"Acme"</span> },</div>
+<div class="t-line">  }],</div>
+<div class="t-line">  scorers: [<span class="t-green">"latency"</span>, <span class="t-green">"cost"</span>, <span class="t-green">"correctness"</span>],</div>
+<div class="t-line">})</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SLIDE 4: Live Demo (full width terminal with typing) ====== -->
+    <section class="slide slide-1col" data-slide="3">
+      <div class="panel" style="max-width: 100%;">
+        <h2>Live demo</h2>
+        <p>From zero to results in seconds. Watch a duel unfold.</p>
+        <div class="terminal" style="margin-top: 12px;">
+          <div class="terminal-chrome">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+            <span class="terminal-title">~/my-project</span>
+          </div>
+          <div class="terminal-body" id="demo-terminal" style="min-height: 280px;">
+            <!-- Typing animation fills this via DOM API -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SLIDE 5: Scorers ====== -->
+    <section class="slide slide-1col" data-slide="4">
+      <div class="panel">
+        <h2>Built-in scorers</h2>
+        <p>Seven scoring dimensions out of the box. Mix and match, or bring your own.</p>
+        <div class="scorer-grid" style="margin-top: 14px;">
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#9989;</div>
+            <h3>Correctness</h3>
+            <p>Exact match or deep-equal comparison against expected output.</p>
+          </div>
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#9889;</div>
+            <h3>Latency</h3>
+            <p>Normalized response time — fastest provider scores 1.0.</p>
+          </div>
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#128176;</div>
+            <h3>Cost</h3>
+            <p>Estimated token cost from pricing catalog. Cheapest scores 1.0.</p>
+          </div>
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#129504;</div>
+            <h3>LLM-as-Judge</h3>
+            <p>Let a judge model score freeform outputs on custom criteria.</p>
+          </div>
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#128196;</div>
+            <h3>JSON Schema</h3>
+            <p>Validates structured output against your Zod schema.</p>
+          </div>
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#128290;</div>
+            <h3>Token Count</h3>
+            <p>Track prompt + completion tokens per provider per task.</p>
+          </div>
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#128295;</div>
+            <h3>Custom</h3>
+            <p>Pure function: <code>(ctx) =&gt; ScoreResult</code>. Full access to input, output, metadata.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SLIDE 6: CI / GitHub Actions ====== -->
+    <section class="slide slide-2col" data-slide="5">
+      <div class="panel">
+        <h2>Quality gates for your prompts</h2>
+        <p>
+          <code>duelist ci</code> runs your arena, compares against baselines, and fails
+          the build on regressions. Ship prompt changes with the same confidence as code changes.
+        </p>
+        <div class="terminal" style="margin-top: 14px;">
+          <div class="terminal-chrome">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+            <span class="terminal-title">.github/workflows/duelist.yml</span>
+          </div>
+          <div class="terminal-body">
+<div class="t-line">- name: Run duels</div>
+<div class="t-line">  run: npx duelist ci</div>
+<div class="t-line">  env:</div>
+<div class="t-line">    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}</div>
+          </div>
+        </div>
+        <ul style="margin-top: 14px;">
+          <li><strong>Regression detection</strong> — alerts when scores drop vs. baseline.</li>
+          <li><strong>Cost budgets</strong> — fail if total cost exceeds threshold.</li>
+          <li><strong>Auto-comment PRs</strong> — posts a comparison table on every push.</li>
+        </ul>
+      </div>
+      <div class="panel panel-accent">
+        <h2>PR comment preview</h2>
+        <div class="pr-mockup" style="margin-top: 12px;">
+          <div class="pr-header">
+            <div class="pr-avatar">&#9876;</div>
+            <span><strong>duelist</strong> bot</span>
+            <span style="color: var(--muted); font-size: 11px; margin-left: auto;">just now</span>
+          </div>
+          <div class="pr-body">
+            <p style="margin-bottom: 8px;"><strong>Agent Duelist CI Results</strong></p>
+            <table class="pr-table">
+              <thead>
+                <tr>
+                  <th>Provider</th>
+                  <th>Correct</th>
+                  <th>Latency</th>
+                  <th>Cost</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>gpt-5-mini</td>
+                  <td>96%</td>
+                  <td>820ms</td>
+                  <td>$0.0014</td>
+                  <td>&#128994;</td>
+                </tr>
+                <tr>
+                  <td>claude-sonnet-4.6</td>
+                  <td>98%</td>
+                  <td>650ms</td>
+                  <td>$0.0018</td>
+                  <td>&#128994;</td>
+                </tr>
+                <tr>
+                  <td>gpt-5-nano</td>
+                  <td>82%</td>
+                  <td>310ms</td>
+                  <td>$0.0004</td>
+                  <td>&#128308;</td>
+                </tr>
+                <tr>
+                  <td>gemini-3-flash</td>
+                  <td>94%</td>
+                  <td>440ms</td>
+                  <td>$0.0006</td>
+                  <td>&#9898;</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="font-size: 11px; margin-top: 8px; margin-bottom: 0;">
+              &#128308; gpt-5-nano: correctness dropped 12% vs baseline
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SLIDE 7: Providers ====== -->
+    <section class="slide slide-2col" data-slide="6">
+      <div class="panel">
+        <h2>Works with every provider</h2>
+        <p>Built-in factories for the big names. Any OpenAI-compatible endpoint just works.</p>
+        <div class="provider-grid">
+          <div class="provider-chip">
+            <span class="icon">&#127468;&#127477;</span>
+            <div class="name">OpenAI</div>
+            <div class="model">gpt-5-mini, gpt-5-nano</div>
+          </div>
+          <div class="provider-chip">
+            <span class="icon">&#9883;</span>
+            <div class="name">Anthropic</div>
+            <div class="model">claude-sonnet-4.6</div>
+          </div>
+          <div class="provider-chip">
+            <span class="icon">&#9830;&#65039;</span>
+            <div class="name">Gemini</div>
+            <div class="model">gemini-3-flash-preview</div>
+          </div>
+          <div class="provider-chip">
+            <span class="icon">&#9729;&#65039;</span>
+            <div class="name">Azure OpenAI</div>
+            <div class="model">gpt-5.2-chat</div>
+          </div>
+          <div class="provider-chip">
+            <span class="icon">&#128268;</span>
+            <div class="name">OpenRouter</div>
+            <div class="model">Any model</div>
+          </div>
+          <div class="provider-chip">
+            <span class="icon">&#128295;</span>
+            <div class="name">Custom</div>
+            <div class="model">Self-hosted / local</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel panel-accent">
+        <h2>Adding a provider: 1 line</h2>
+        <div class="terminal" style="margin-top: 14px;">
+          <div class="terminal-chrome">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+            <span class="terminal-title">arena.config.ts</span>
+          </div>
+          <div class="terminal-body">
+<div class="t-line">providers: [</div>
+<div class="t-line t-dim">  // Built-in factories</div>
+<div class="t-line">  openai(<span class="t-green">"gpt-5-mini"</span>),</div>
+<div class="t-line">  openai(<span class="t-green">"gpt-5-nano"</span>),</div>
+<div class="t-line">&nbsp;</div>
+<div class="t-line t-dim">  // Any OpenAI-compatible API</div>
+<div class="t-line">  openai(<span class="t-green">"claude-sonnet-4.6"</span>, {</div>
+<div class="t-line">    baseURL: <span class="t-green">"https://api.anthropic.com/v1"</span>,</div>
+<div class="t-line">  }),</div>
+<div class="t-line">&nbsp;</div>
+<div class="t-line t-dim">  // Local / self-hosted</div>
+<div class="t-line">  openai(<span class="t-green">"llama-4-scout"</span>, {</div>
+<div class="t-line">    baseURL: <span class="t-green">"http://localhost:11434/v1"</span>,</div>
+<div class="t-line">  }),</div>
+<div class="t-line">]</div>
+          </div>
+        </div>
+        <p style="margin-top: 14px;">
+          Anything that speaks the OpenAI chat completions API is a valid provider.
+          No adapters, no plugins, no SDK lock-in.
+        </p>
+      </div>
+    </section>
+
+    <!-- ====== SLIDE 8: CTA ====== -->
+    <section class="slide slide-2col" data-slide="7">
+      <div class="panel">
+        <h2>Run your first duel tonight.</h2>
+        <p style="font-size: 15px; color: var(--text); margin-bottom: 16px;">
+          Three commands. Five minutes. Real data on which provider wins for your use case.
+        </p>
+        <div class="terminal">
+          <div class="terminal-chrome">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+            <span class="terminal-title">get started</span>
+          </div>
+          <div class="terminal-body">
+<div class="t-line">$ npm install agent-duelist</div>
+<div class="t-line">$ npx duelist init</div>
+<div class="t-line">$ npx duelist run</div>
+<div class="t-line">&nbsp;</div>
+<div class="t-line t-green">&#10003; 3 tasks &#215; 2 providers completed</div>
+<div class="t-line t-accent">&#9654; Winner: claude-sonnet-4.6 (98% correct, 650ms)</div>
+          </div>
+        </div>
+        <div class="cta-row">
+          <a class="cta-btn cta-primary" href="https://github.com/DataGobes/agent-duelist" target="_blank" rel="noopener">
+            &#11088; Star on GitHub
+          </a>
+          <a class="cta-btn cta-secondary" href="https://www.npmjs.com/package/agent-duelist" target="_blank" rel="noopener">
+            View on npm
+          </a>
+        </div>
+      </div>
+      <div class="panel panel-accent">
+        <h2>Add to your CI in 30 seconds</h2>
+        <div class="terminal" style="margin-top: 14px;">
+          <div class="terminal-chrome">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+            <span class="terminal-title">.github/workflows/duelist.yml</span>
+          </div>
+          <div class="terminal-body">
+<div class="t-line t-dim">name: LLM Quality Gate</div>
+<div class="t-line t-dim">on: [push, pull_request]</div>
+<div class="t-line t-dim">jobs:</div>
+<div class="t-line t-dim">  duel:</div>
+<div class="t-line t-dim">    runs-on: ubuntu-latest</div>
+<div class="t-line t-dim">    steps:</div>
+<div class="t-line">      - uses: actions/checkout@v4</div>
+<div class="t-line">      - uses: actions/setup-node@v4</div>
+<div class="t-line">      - run: npm ci</div>
+<div class="t-line">      - run: <span class="t-accent">npx duelist ci</span></div>
+<div class="t-line">        env:</div>
+<div class="t-line">          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}</div>
+          </div>
+        </div>
+        <p style="margin-top: 14px;">
+          Quality gates for prompts, just like tests for code.
+          Never ship a regression again.
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="deck-footer">
+    <span class="nav-hint">Use &#8592; &#8594; arrow keys or click to navigate</span>
+    <div class="nav-controls">
+      <button class="nav-btn" id="prevBtn">&#8592; Prev</button>
+      <div class="dots" id="dots"></div>
+      <button class="nav-btn primary" id="nextBtn">Next &#8594;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // === Slide navigation ===
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var dotsEl = document.getElementById('dots');
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var current = 0;
+  var transitioning = false;
+
+  function renderDots() {
+    while (dotsEl.firstChild) { dotsEl.removeChild(dotsEl.firstChild); }
+    slides.forEach(function(_, i) {
+      var d = document.createElement('span');
+      d.className = 'dot' + (i === current ? ' active' : '');
+      d.addEventListener('click', function() { goTo(i); });
+      dotsEl.appendChild(d);
+    });
+  }
+
+  function goTo(idx, direction) {
+    if (transitioning || idx === current || idx < 0 || idx >= slides.length) return;
+    transitioning = true;
+
+    var dir = direction || (idx > current ? 1 : -1);
+    var oldSlide = slides[current];
+    var newSlide = slides[idx];
+
+    // Exit old slide
+    oldSlide.classList.remove('active');
+    oldSlide.style.transform = dir > 0 ? 'translateX(-60px)' : 'translateX(60px)';
+    oldSlide.style.opacity = '0';
+
+    // Prepare new slide entry
+    newSlide.style.transform = dir > 0 ? 'translateX(60px)' : 'translateX(-60px)';
+    newSlide.style.opacity = '0';
+    newSlide.classList.add('active');
+
+    // Force reflow then animate in
+    void newSlide.offsetHeight;
+    newSlide.style.transform = 'translateX(0)';
+    newSlide.style.opacity = '1';
+
+    current = idx;
+    renderDots();
+
+    // Trigger demo animation on slide 4 (index 3)
+    if (current === 3) {
+      startDemoAnimation();
+    }
+
+    setTimeout(function() {
+      oldSlide.style.transform = '';
+      oldSlide.style.opacity = '';
+      transitioning = false;
+    }, 260);
+  }
+
+  prevBtn.addEventListener('click', function() { goTo(current - 1, -1); });
+  nextBtn.addEventListener('click', function() { goTo(current + 1, 1); });
+
+  document.addEventListener('keydown', function(e) {
+    // Respect other handlers and avoid breaking native behavior on interactive elements
+    if (e.defaultPrevented) return;
+
+    var target = e.target;
+    if (target && (
+      target.closest('input, textarea, button, select, a') ||
+      target.isContentEditable
+    )) {
+      return;
+    }
+
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      goTo(current + 1, 1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      goTo(current - 1, -1);
+    }
+  });
+
+  renderDots();
+
+  // === Terminal typing animation for slide 4 ===
+  var demoLines = [
+    { text: '$ npx duelist run --config arena.config.ts', cls: 't-dim', delay: 40 },
+    { text: '', cls: '', delay: 600 },
+    { text: 'Running 3 tasks \u00d7 3 providers (1 run each)...', cls: 't-muted', delay: 800 },
+    { text: '', cls: '', delay: 300 },
+    { text: 'gpt-5-mini \u00d7 extract-company      820ms  $0.00014  \u2713 correct', cls: 't-dim', delay: 200 },
+    { text: 'gpt-5-mini \u00d7 summarize-email       1.2s   $0.00031  \u2713 correct', cls: 't-dim', delay: 200 },
+    { text: 'gpt-5-mini \u00d7 classify-intent       410ms  $0.00008  \u2713 correct', cls: 't-dim', delay: 200 },
+    { text: '', cls: '', delay: 150 },
+    { text: 'gpt-5-nano \u00d7 extract-company      310ms  $0.00004  \u2717 partial', cls: 't-red', delay: 200 },
+    { text: 'gpt-5-nano \u00d7 summarize-email       680ms  $0.00009  \u2713 correct', cls: 't-dim', delay: 200 },
+    { text: 'gpt-5-nano \u00d7 classify-intent       220ms  $0.00003  \u2713 correct', cls: 't-dim', delay: 200 },
+    { text: '', cls: '', delay: 150 },
+    { text: 'gpt-5.2-chat \u00d7 extract-company    580ms  $0.00021  \u2713 correct', cls: 't-dim', delay: 200 },
+    { text: 'gpt-5.2-chat \u00d7 summarize-email     920ms  $0.00042  \u2713 correct', cls: 't-dim', delay: 200 },
+    { text: 'gpt-5.2-chat \u00d7 classify-intent     350ms  $0.00012  \u2713 correct', cls: 't-dim', delay: 200 },
+    { text: '', cls: '', delay: 500 },
+    { text: '\u25b6 Agent Duelist Results', cls: 't-accent t-bold', delay: 400 },
+    { text: '\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510', cls: 't-muted', delay: 80 },
+    { text: '\u2502 Provider     \u2502 Correct   \u2502 Latency \u2502 Cost     \u2502 Score \u2502', cls: 't-muted', delay: 80 },
+    { text: '\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524', cls: 't-muted', delay: 80 },
+    { text: '\u2502 gpt-5-mini   \u2502 100%      \u2502  810ms  \u2502 $0.00018 \u2502  0.92 \u2502', cls: 't-green', delay: 120 },
+    { text: '\u2502 gpt-5.2-chat \u2502 100%      \u2502  617ms  \u2502 $0.00025 \u2502  0.88 \u2502', cls: 't-green', delay: 120 },
+    { text: '\u2502 gpt-5-nano   \u2502  67%      \u2502  403ms  \u2502 $0.00005 \u2502  0.61 \u2502', cls: 't-red', delay: 120 },
+    { text: '\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518', cls: 't-muted', delay: 80 },
+    { text: '', cls: '', delay: 300 },
+    { text: '  \ud83c\udfc6 Winner: gpt-5-mini \u2014 best overall (correctness + speed + cost)', cls: 't-accent', delay: 0 },
+  ];
+
+  var demoTimer = null;
+  var demoRunning = false;
+
+  function startDemoAnimation() {
+    var container = document.getElementById('demo-terminal');
+    if (!container) return;
+
+    // Reset
+    if (demoTimer) clearTimeout(demoTimer);
+    while (container.firstChild) { container.removeChild(container.firstChild); }
+    demoRunning = true;
+
+    var lineIdx = 0;
+    var charIdx = 0;
+    var currentDiv = null;
+
+    function typeNext() {
+      if (!demoRunning) return;
+      if (lineIdx >= demoLines.length) {
+        demoRunning = false;
+        return;
+      }
+
+      var line = demoLines[lineIdx];
+
+      // First char of a new line: create the div
+      if (charIdx === 0) {
+        currentDiv = document.createElement('div');
+        currentDiv.className = 't-line ' + line.cls;
+        if (line.text === '') {
+          currentDiv.textContent = '\u00a0'; // non-breaking space
+          container.appendChild(currentDiv);
+          lineIdx++;
+          charIdx = 0;
+          container.scrollTop = container.scrollHeight;
+          demoTimer = setTimeout(typeNext, line.delay);
+          return;
+        }
+        container.appendChild(currentDiv);
+      }
+
+      // Type character by character for the first line (command), instant for the rest
+      if (lineIdx === 0 && charIdx < line.text.length) {
+        currentDiv.textContent = line.text.substring(0, charIdx + 1);
+        charIdx++;
+        container.scrollTop = container.scrollHeight;
+        demoTimer = setTimeout(typeNext, line.delay);
+      } else {
+        // Instant render for non-command lines
+        if (lineIdx > 0) {
+          currentDiv.textContent = line.text;
+        }
+        container.scrollTop = container.scrollHeight;
+        lineIdx++;
+        charIdx = 0;
+        demoTimer = setTimeout(typeNext, line.delay);
+      }
+    }
+
+    demoTimer = setTimeout(typeNext, 400);
+  }
+</script>
+
+</body>
+</html>
