@@ -426,7 +426,8 @@ export function consoleReporter(results: BenchmarkResult[], options?: ConsoleRep
               }
               if (showSparklines) {
                 const { fill, track } = sparkBar(val)
-                cells.push(`${coloredPct} ${fill}${dim(track)}`)
+                const barColor = val >= 0.8 ? green : val >= 0.5 ? yellow : red
+                cells.push(`${coloredPct} ${barColor}${fill}${reset}${dim(track)}`)
               } else {
                 cells.push(coloredPct)
               }
@@ -554,6 +555,29 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
       console.log(`  ${medal} Avg cost:        ${brightGreen}${boldCode}${costStr}${reset}`)
     } else {
       console.log(`  ${medal} Cheapest:      ${bold(byCost.id)} ${dim(providerLabel(byCost.id))}  ${brightGreen}${boldCode}${costStr}${reset}`)
+    }
+  }
+
+  // Overall winner (2+ providers) — most category wins
+  if (!single) {
+    const wins = new Map<string, number>()
+    for (const id of providers) wins.set(id, 0)
+
+    if (byCorrectness) wins.set(byCorrectness.id, (wins.get(byCorrectness.id) ?? 0) + 1)
+    if (byLatency && byLatency.avg !== Infinity) wins.set(byLatency.id, (wins.get(byLatency.id) ?? 0) + 1)
+    if (byCost?.avg !== undefined) wins.set(byCost.id, (wins.get(byCost.id) ?? 0) + 1)
+
+    const maxWins = Math.max(...wins.values())
+    if (maxWins > 0) {
+      const topProviders = [...wins.entries()].filter(([, w]) => w === maxWins)
+      console.log('')
+      if (topProviders.length === 1) {
+        const [winnerId, winCount] = topProviders[0]!
+        console.log(`  🏆 Overall:      ${brightGreen}${boldCode}${winnerId}${reset} ${dim(providerLabel(winnerId))}  ${dim(`(${winCount}/3 categories)`)}`)
+      } else {
+        const names = topProviders.map(([id]) => bold(id)).join(dim(', '))
+        console.log(`  🏆 Overall:      ${names}  ${dim(`(tied at ${maxWins}/3)`)}`)
+      }
     }
   }
 
