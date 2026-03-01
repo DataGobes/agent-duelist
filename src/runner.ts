@@ -27,10 +27,14 @@ export interface RunOptions {
   onResult?: (result: BenchmarkResult) => void
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+function withTimeout<T>(run: (signal: AbortSignal) => Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Request timed out after ${ms}ms`)), ms)
-    promise.then(
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      controller.abort()
+      reject(new Error(`Request timed out after ${ms}ms`))
+    }, ms)
+    run(controller.signal).then(
       (v) => { clearTimeout(timer); resolve(v) },
       (e) => { clearTimeout(timer); reject(e) },
     )
@@ -48,14 +52,12 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
         let result: BenchmarkResult
 
         try {
-          const taskResult = await withTimeout(
-            provider.run({
+          const taskResult = await withTimeout((signal) => provider.run({
               prompt: task.prompt,
               schema: task.schema,
               tools: task.tools,
-            }),
-            timeout,
-          )
+              signal,
+            }), timeout)
 
           const scores = await Promise.all(
             scorers.map((scorer) => scorer({ task, result: taskResult }, provider.id))

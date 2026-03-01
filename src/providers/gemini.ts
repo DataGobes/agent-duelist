@@ -4,6 +4,7 @@ import type { ArenaProvider } from './types.js'
 
 export interface GeminiProviderOptions {
   apiKey?: string
+  timeoutMs?: number
 }
 
 export function gemini(model: string, options?: GeminiProviderOptions): ArenaProvider {
@@ -18,7 +19,7 @@ export function gemini(model: string, options?: GeminiProviderOptions): ArenaPro
   const client = new OpenAI({
     apiKey,
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    timeout: REQUEST_TIMEOUT_MS,
+    timeout: options?.timeoutMs ?? REQUEST_TIMEOUT_MS,
   })
 
   return makeProvider(`google/${model}`, 'Google AI', model, client, model)

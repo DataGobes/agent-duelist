@@ -30,7 +30,7 @@ export function anthropic(model: string, options?: AnthropicProviderOptions): Ar
         max_tokens: maxTokens,
         system: systemMessage,
         messages: [{ role: 'user', content: input.prompt }],
-      })
+      }, { signal: input.signal })
 
       const latencyMs = Date.now() - start
 
