@@ -1,8 +1,11 @@
 # agent-duelist
 
 [![CI](https://github.com/DataGobes/agent-duelist/actions/workflows/ci.yml/badge.svg)](https://github.com/DataGobes/agent-duelist/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-landing%20page-f59e0b)](https://datagobes.github.io/agent-duelist/)
 
 > Pit LLM providers against each other on agent tasks — Duel your models.
+>
+> **[View the landing page →](https://datagobes.github.io/agent-duelist/)**
 
 `agent-duelist` is a TypeScript-first framework to pit multiple LLM providers against each other on the same tasks and get structured, reproducible results: correctness, latency, tokens, and cost.
 
