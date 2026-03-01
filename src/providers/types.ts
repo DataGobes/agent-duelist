@@ -11,6 +11,7 @@ export interface TaskInput {
   prompt: string
   schema?: ZodSchema
   tools?: ToolDefinition[]
+  signal?: AbortSignal
 }
 
 export interface TaskResult {

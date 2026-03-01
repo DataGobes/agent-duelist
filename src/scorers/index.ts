@@ -16,10 +16,10 @@ const staticScorers: Partial<Record<BuiltInScorerName, ScorerFn>> = {
   'tool-usage': toolUsageScorer,
 }
 
-export function resolveScorers(names: BuiltInScorerName[], judgeModel?: string): ScorerFn[] {
+export function resolveScorers(names: BuiltInScorerName[], judgeModel?: string, timeoutMs?: number): ScorerFn[] {
   return names.map((name) => {
     if (name === 'llm-judge-correctness') {
-      return createLlmJudgeScorer(judgeModel)
+      return createLlmJudgeScorer(judgeModel, timeoutMs)
     }
     const scorer = staticScorers[name]
     if (!scorer) {

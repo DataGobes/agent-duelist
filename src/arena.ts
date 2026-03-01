@@ -38,7 +38,7 @@ export function defineArena(config: ArenaConfig): Arena {
   }
 
   const scorerNames = config.scorers ?? ['latency', 'cost', 'correctness']
-  const scorerFns = resolveScorers(scorerNames, config.judgeModel)
+  const scorerFns = resolveScorers(scorerNames, config.judgeModel, config.timeout)
   const runs = config.runs ?? 1
 
   return {
