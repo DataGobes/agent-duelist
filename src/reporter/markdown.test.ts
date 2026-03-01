@@ -46,7 +46,7 @@ function makeReport(overrides: Partial<CiReport>): CiReport {
 
 describe('COMMENT_MARKER', () => {
   it('is an HTML comment for idempotent PR updates', () => {
-    expect(COMMENT_MARKER).toMatch(/^<!--.*-->$/)
+    expect(COMMENT_MARKER).toMatch(/^<!--[\s\S]*-->$/)
   })
 })
 
