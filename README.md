@@ -420,6 +420,12 @@ npx duelist run
 
 Output includes box-drawing tables with medals, color-ranked metrics, sparkline bars, and a winner row per task — see the [screenshot above](#what-you-get) for a real example.
 
+**How scoring works:**
+
+- Providers are compared **head-to-head within each task** — all providers receive the same prompt at the same time.
+- Medals are awarded only when a provider is the **sole leader** in a metric column. Ties don't award medals, keeping rankings meaningful.
+- The overall winner is determined by category wins across correctness, latency, and cost.
+
 ---
 
 ## Tool-calling agent example
@@ -514,10 +520,11 @@ With cost summary, flakiness warnings, and pass/fail verdict.
 
 Shipped so far:
 
-- OpenAI, Azure OpenAI, Anthropic, Google Gemini, and OpenAI-compatible providers
+- OpenAI, Azure OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible provider
 - 7 built-in scorers including LLM-as-judge, tool-usage, schema validation, and fuzzy similarity
 - Tool-calling support with local handlers for agent task benchmarking
-- Console reporter with box-drawing tables, medal rankings, sparkline bars (toggleable), and per-task winner rows
+- Fair head-to-head benchmarking: tasks run sequentially while providers race in parallel, ensuring fair latency comparison without queue-induced timeout penalties
+- Console reporter with box-drawing tables, sole-leader medal rankings, sparkline bars (toggleable), and per-task winner rows
 - Configurable per-request timeout to prevent hanging on unresponsive APIs
 - JSON reporter for CI/pipeline integration
 - Markdown reporter for PR comments

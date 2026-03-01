@@ -44,17 +44,16 @@ function withTimeout<T>(run: (signal: AbortSignal) => Promise<T>, ms: number): P
 export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResult[]> {
   const { providers, tasks, scorers, runs, onResult } = options
   const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
+
   const results: BenchmarkResult[] = []
 
-  // Tasks run sequentially; providers within each task run in parallel.
-  // This keeps concurrency bounded to the number of providers (typically 2-5)
-  // and prevents scorer API calls (e.g. llm-judge) from overwhelming rate limits.
+  // Tasks run sequentially so every provider faces the same conditions per task.
+  // Providers within each task run in parallel — fair head-to-head comparison
+  // without queue-induced timeout penalties from full parallelism.
   for (const task of tasks) {
-    const taskResults = await Promise.all(
-      providers.map(async (provider) => {
-        const comboResults: BenchmarkResult[] = []
-
-        for (let run = 1; run <= runs; run++) {
+    for (let run = 1; run <= runs; run++) {
+      const runResults = await Promise.all(
+        providers.map(async (provider) => {
           let result: BenchmarkResult
 
           try {
@@ -94,16 +93,13 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
             }
           }
 
-          comboResults.push(result)
           onResult?.(result)
-        }
+          return result
+        })
+      )
 
-        return comboResults
-      })
-    )
-
-    // Flatten provider results in original provider order
-    results.push(...taskResults.flat())
+      results.push(...runResults)
+    }
   }
 
   return results

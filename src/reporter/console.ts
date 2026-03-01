@@ -217,10 +217,11 @@ function computeMedals(
 
   for (const [, colStats] of columnStats) {
     if (colStats.best === undefined) continue
-    for (const [providerId, value] of colStats.values) {
-      if (value !== undefined && value === colStats.best) {
-        wins.set(providerId, (wins.get(providerId) ?? 0) + 1)
-      }
+    // Only award a win when exactly one provider holds the best value
+    const bestProviders = [...colStats.values.entries()]
+      .filter(([, v]) => v !== undefined && v === colStats.best)
+    if (bestProviders.length === 1) {
+      wins.set(bestProviders[0]![0], (wins.get(bestProviders[0]![0]) ?? 0) + 1)
     }
   }
 

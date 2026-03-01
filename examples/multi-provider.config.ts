@@ -6,7 +6,7 @@
  *
  * Reads API keys from .env automatically.
  */
-import { defineArena, azureOpenai, openaiCompatible } from 'agent-duelist'
+import { defineArena, azureOpenai, gemini, openaiCompatible } from 'agent-duelist'
 import { z } from 'zod'
 
 // Use multiple deployments from Azure to compare models
@@ -15,6 +15,8 @@ export default defineArena({
     azureOpenai('gpt-5-mini'),
     azureOpenai('gpt-5-nano'),
     azureOpenai('gpt-5.2-chat'),
+    gemini('gemini-3-flash-preview'),
+    gemini('gemini-3.1-pro-preview'),
     openaiCompatible({
       id: 'minimax/minimax-m2.5',
       name: 'MiniMax',
@@ -22,6 +24,23 @@ export default defineArena({
       baseURL: 'https://api.minimax.io/v1',
       apiKeyEnv: 'MINIMAX_API_KEY',
       stripThinking: true,
+    }),
+    openaiCompatible({
+      id: 'minimax/minimax-m2.1',
+      name: 'MiniMax',
+      model: 'MiniMax-M2.1',
+      baseURL: 'https://api.minimax.io/v1',
+      apiKeyEnv: 'MINIMAX_API_KEY',
+      stripThinking: true,
+    }),
+    openaiCompatible({
+      id: 'ollama/qwen3.5:35b-a3b',
+      name: 'Ollama',
+      model: 'qwen3.5:35b-a3b',
+      baseURL: 'http://localhost:11434/v1',
+      apiKey: 'ollama',
+      stripThinking: true,
+      free: true,
     }),
   ],
 
@@ -48,6 +67,6 @@ export default defineArena({
     },
   ],
 
-  scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'fuzzy-similarity'],
+  scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'llm-judge-correctness'],
   runs: 3,
 })

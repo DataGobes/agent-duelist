@@ -8,8 +8,13 @@ const results = await arena.run({
       console.log(`  ✗ ${result.providerId} × ${result.taskName}: ${result.error}`)
     } else {
       const scores = result.scores
-        .filter((s) => s.value >= 0)
-        .map((s) => `${s.name}=${s.value}`)
+        .map((s) => {
+          if (s.value < 0) {
+            const reason = (s.details as Record<string, unknown>)?.reason
+            return `${s.name}=SKIP${reason ? ` (${reason})` : ''}`
+          }
+          return `${s.name}=${s.value}`
+        })
         .join(' ')
       console.log(`  ✓ ${result.providerId} × ${result.taskName}: ${scores}`)
     }
