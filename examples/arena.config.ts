@@ -7,7 +7,7 @@ import { z } from 'zod'
 
 export default defineArena({
   providers: [
-    openai('gpt-4o-mini'),
+    openai('gpt-5-mini'),
   ],
 
   tasks: [

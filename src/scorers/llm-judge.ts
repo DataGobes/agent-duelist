@@ -23,7 +23,7 @@ interface JudgeClientResult {
 }
 
 function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined {
-  const model = configModel ?? process.env.DUELIST_JUDGE_MODEL ?? 'gpt-4o-mini'
+  const model = configModel ?? process.env.DUELIST_JUDGE_MODEL ?? 'gpt-5-mini'
 
   // If the judge model starts with "gemini", use Google's OpenAI-compatible endpoint
   if (model.startsWith('gemini') && process.env.GOOGLE_API_KEY) {

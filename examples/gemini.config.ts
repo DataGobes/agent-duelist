@@ -12,7 +12,7 @@ import { z } from 'zod'
 
 export default defineArena({
   providers: [
-    gemini('gemini-2.5-flash'),
+    gemini('gemini-3-flash-preview'),
     azureOpenai('gpt-5-mini'),
     openaiCompatible({
       id: 'minimax/minimax-m2.5',

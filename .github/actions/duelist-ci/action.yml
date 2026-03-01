@@ -1,0 +1,86 @@
+name: 'Agent Duelist CI'
+description: 'Run LLM eval benchmarks, compare against baseline, and enforce quality gates'
+branding:
+  icon: 'zap'
+  color: 'purple'
+
+inputs:
+  config:
+    description: 'Path to arena config file'
+    required: false
+    default: 'arena.config.ts'
+  baseline:
+    description: 'Path to baseline JSON file'
+    required: false
+    default: '.duelist/baseline.json'
+  budget:
+    description: 'Max total cost in USD'
+    required: false
+  thresholds:
+    description: 'Regression thresholds (space-separated scorer=delta pairs, e.g. "correctness=0.1 cost=0.002")'
+    required: false
+  update-baseline:
+    description: 'Save results as new baseline after passing'
+    required: false
+    default: 'false'
+  comment:
+    description: 'Post results as PR comment'
+    required: false
+    default: 'true'
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '20'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Run duelist ci
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        ARGS="--config ${{ inputs.config }} --baseline ${{ inputs.baseline }}"
+
+        if [ -n "${{ inputs.budget }}" ]; then
+          ARGS="$ARGS --budget ${{ inputs.budget }}"
+        fi
+
+        if [ -n "${{ inputs.thresholds }}" ]; then
+          for t in ${{ inputs.thresholds }}; do
+            ARGS="$ARGS --threshold $t"
+          done
+        fi
+
+        if [ "${{ inputs.update-baseline }}" = "true" ]; then
+          ARGS="$ARGS --update-baseline"
+        fi
+
+        if [ "${{ inputs.comment }}" = "true" ]; then
+          ARGS="$ARGS --comment"
+        fi
+
+        npx duelist ci $ARGS
+
+    - name: Commit updated baseline
+      if: inputs.update-baseline == 'true'
+      shell: bash
+      run: |
+        if git diff --quiet "${{ inputs.baseline }}" 2>/dev/null; then
+          echo "Baseline unchanged, nothing to commit."
+        else
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.baseline }}"
+          git commit -m "chore: update duelist baseline"
+          git push
+        fi
