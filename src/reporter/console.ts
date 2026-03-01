@@ -101,7 +101,6 @@ interface ColumnStats {
   values: Map<string, number | undefined>
   best: number | undefined
   worst: number | undefined
-  lowerIsBetter: boolean
 }
 
 interface ProviderTaskData {
