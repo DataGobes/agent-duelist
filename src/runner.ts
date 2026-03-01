@@ -44,68 +44,67 @@ function withTimeout<T>(run: (signal: AbortSignal) => Promise<T>, ms: number): P
 export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResult[]> {
   const { providers, tasks, scorers, runs, onResult } = options
   const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
+  const results: BenchmarkResult[] = []
 
-  // Build all provider × task combinations for parallel execution
-  const combinations = tasks.flatMap((task, taskIdx) =>
-    providers.map((provider, providerIdx) => ({ task, taskIdx, provider, providerIdx }))
-  )
+  // Tasks run sequentially; providers within each task run in parallel.
+  // This keeps concurrency bounded to the number of providers (typically 2-5)
+  // and prevents scorer API calls (e.g. llm-judge) from overwhelming rate limits.
+  for (const task of tasks) {
+    const taskResults = await Promise.all(
+      providers.map(async (provider) => {
+        const comboResults: BenchmarkResult[] = []
 
-  // Run combinations in parallel; runs within each combination stay sequential
-  const nested = await Promise.all(
-    combinations.map(async ({ task, taskIdx, provider, providerIdx }) => {
-      const comboResults: (BenchmarkResult & { _taskIdx: number; _providerIdx: number })[] = []
+        for (let run = 1; run <= runs; run++) {
+          let result: BenchmarkResult
 
-      for (let run = 1; run <= runs; run++) {
-        let result: BenchmarkResult
+          try {
+            const taskResult = await withTimeout((signal) => provider.run({
+                prompt: task.prompt,
+                schema: task.schema,
+                tools: task.tools,
+                signal,
+              }), timeout)
 
-        try {
-          const taskResult = await withTimeout((signal) => provider.run({
-              prompt: task.prompt,
-              schema: task.schema,
-              tools: task.tools,
-              signal,
-            }), timeout)
+            const scores = await Promise.all(
+              scorers.map((scorer) => scorer({ task, result: taskResult }, provider.id))
+            )
 
-          const scores = await Promise.all(
-            scorers.map((scorer) => scorer({ task, result: taskResult }, provider.id))
-          )
+            result = {
+              providerId: provider.id,
+              taskName: task.name,
+              run,
+              scores,
+              raw: {
+                output: taskResult.output,
+                latencyMs: taskResult.latencyMs,
+                usage: taskResult.usage,
+                toolCalls: taskResult.toolCalls,
+              },
+            }
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err)
 
-          result = {
-            providerId: provider.id,
-            taskName: task.name,
-            run,
-            scores,
-            raw: {
-              output: taskResult.output,
-              latencyMs: taskResult.latencyMs,
-              usage: taskResult.usage,
-              toolCalls: taskResult.toolCalls,
-            },
+            result = {
+              providerId: provider.id,
+              taskName: task.name,
+              run,
+              scores: [],
+              error: message,
+              raw: { output: '', latencyMs: 0 },
+            }
           }
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err)
 
-          result = {
-            providerId: provider.id,
-            taskName: task.name,
-            run,
-            scores: [],
-            error: message,
-            raw: { output: '', latencyMs: 0 },
-          }
+          comboResults.push(result)
+          onResult?.(result)
         }
 
-        comboResults.push({ ...result, _taskIdx: taskIdx, _providerIdx: providerIdx })
-        onResult?.(result)
-      }
+        return comboResults
+      })
+    )
 
-      return comboResults
-    })
-  )
+    // Flatten provider results in original provider order
+    results.push(...taskResults.flat())
+  }
 
-  // Flatten and sort to match original ordering: task → provider → run
-  return nested
-    .flat()
-    .sort((a, b) => a._taskIdx - b._taskIdx || a._providerIdx - b._providerIdx || a.run - b.run)
-    .map(({ _taskIdx: _, _providerIdx: __, ...result }) => result)
+  return results
 }
