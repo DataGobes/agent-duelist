@@ -99,7 +99,7 @@ export function createLlmJudgeScorer(judgeModel?: string, timeoutMs = REQUEST_TI
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0,
-        max_tokens: 128,
+        max_tokens: 512,
       })
 
       const content = response.choices[0]?.message?.content?.trim() ?? ''
