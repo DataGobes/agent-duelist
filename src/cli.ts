@@ -75,7 +75,7 @@ program
         console.log(jsonReporter(results))
       } else {
         console.log('')
-        consoleReporter(results)
+        consoleReporter(results, { sparklines: typedArena.config?.sparklines })
       }
 
       // Exit with non-zero if every single result errored
@@ -161,7 +161,7 @@ program
     // 4. Console output
     const { consoleReporter } = await import('./reporter/console.js')
     console.log('')
-    consoleReporter(results)
+    consoleReporter(results, { sparklines: typedArena.config?.sparklines })
 
     // Print CI verdict
     const { markdownReporter, COMMENT_MARKER } = await import('./reporter/markdown.js')
@@ -209,7 +209,10 @@ program
 
 program.parse()
 
-type ArenaRunner = { run: (opts?: { onResult?: (r: BenchmarkResult) => void }) => Promise<BenchmarkResult[]> }
+type ArenaRunner = {
+  config?: { sparklines?: boolean }
+  run: (opts?: { onResult?: (r: BenchmarkResult) => void }) => Promise<BenchmarkResult[]>
+}
 
 async function loadArenaConfig(configOpt: string): Promise<ArenaRunner> {
   const configPath = resolve(configOpt)

@@ -16,16 +16,30 @@ export interface BenchmarkResult {
   }
 }
 
+const DEFAULT_TIMEOUT_MS = 60_000
+
 export interface RunOptions {
   providers: ArenaProvider[]
   tasks: ArenaTask[]
   scorers: ScorerFn[]
   runs: number
+  timeout?: number
   onResult?: (result: BenchmarkResult) => void
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Request timed out after ${ms}ms`)), ms)
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v) },
+      (e) => { clearTimeout(timer); reject(e) },
+    )
+  })
 }
 
 export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResult[]> {
   const { providers, tasks, scorers, runs, onResult } = options
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
   const results: BenchmarkResult[] = []
 
   for (const task of tasks) {
@@ -34,11 +48,14 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
         let result: BenchmarkResult
 
         try {
-          const taskResult = await provider.run({
-            prompt: task.prompt,
-            schema: task.schema,
-            tools: task.tools,
-          })
+          const taskResult = await withTimeout(
+            provider.run({
+              prompt: task.prompt,
+              schema: task.schema,
+              tools: task.tools,
+            }),
+            timeout,
+          )
 
           const scores = await Promise.all(
             scorers.map((scorer) => scorer({ task, result: taskResult }, provider.id))

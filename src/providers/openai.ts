@@ -4,6 +4,9 @@ import { registerPricing } from '../pricing/lookup.js'
 import type { ToolDefinition } from '../tasks/types.js'
 import type { ArenaProvider, TaskInput, TaskResult, ToolCall } from './types.js'
 
+/** Default per-request timeout in ms (60 s). Prevents hanging on unresponsive APIs. */
+export const REQUEST_TIMEOUT_MS = 60_000
+
 export interface OpenAIProviderOptions {
   apiKey?: string
   baseURL?: string
@@ -20,6 +23,7 @@ export function openai(model: string, options?: OpenAIProviderOptions): ArenaPro
   const client = new OpenAI({
     apiKey: options?.apiKey ?? process.env.OPENAI_API_KEY,
     baseURL: options?.baseURL,
+    timeout: REQUEST_TIMEOUT_MS,
   })
 
   return makeProvider(`openai/${model}`, 'OpenAI', model, client, model)
@@ -46,6 +50,7 @@ export function openaiCompatible(options: OpenAICompatibleOptions): ArenaProvide
   const client = new OpenAI({
     apiKey,
     baseURL: options.baseURL,
+    timeout: REQUEST_TIMEOUT_MS,
   })
 
   if (options.free) {
@@ -69,6 +74,7 @@ export function azureOpenai(model: string, options?: AzureOpenAIProviderOptions)
     endpoint: options?.endpoint ?? process.env.AZURE_OPENAI_ENDPOINT,
     apiVersion: options?.apiVersion ?? process.env.AZURE_OPENAI_API_VERSION ?? '2024-12-01-preview',
     deployment,
+    timeout: REQUEST_TIMEOUT_MS,
   })
 
   return makeProvider(`azure/${model}`, 'Azure OpenAI', model, client, deployment)

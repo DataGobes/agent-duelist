@@ -1,4 +1,5 @@
 import OpenAI, { AzureOpenAI } from 'openai'
+import { REQUEST_TIMEOUT_MS } from '../providers/openai.js'
 import type { ScorerFn } from './types.js'
 
 const JUDGE_PROMPT = `You are a strict scoring judge. Evaluate the actual output against the expected output on three criteria. Score each from 0.0 to 1.0 using the full range (not just 0, 0.5, 1).
@@ -31,6 +32,7 @@ function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined
       client: new OpenAI({
         apiKey: process.env.GOOGLE_API_KEY,
         baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+        timeout: REQUEST_TIMEOUT_MS,
       }),
       model,
     }
@@ -44,6 +46,7 @@ function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined
         endpoint: process.env.AZURE_OPENAI_ENDPOINT,
         apiVersion: process.env.AZURE_OPENAI_API_VERSION ?? '2024-12-01-preview',
         deployment: model,
+        timeout: REQUEST_TIMEOUT_MS,
       }),
       model,
     }
@@ -53,7 +56,7 @@ function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return undefined
 
-  return { client: new OpenAI({ apiKey }), model }
+  return { client: new OpenAI({ apiKey, timeout: REQUEST_TIMEOUT_MS }), model }
 }
 
 /**

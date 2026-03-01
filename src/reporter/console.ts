@@ -44,22 +44,14 @@ function padCell(str: string, targetWidth: number, align: 'left' | 'right'): str
 
 // ── Sparkline bar ───────────────────────────────────────────────────────────
 
-const BLOCKS = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█']
+interface SparkBarParts { fill: string; track: string }
 
-function sparkBar(ratio: number, width: number = 8): string {
+function sparkBar(ratio: number, width: number = 8): SparkBarParts {
   const clamped = Math.max(0, Math.min(1, ratio))
-  const totalEighths = clamped * width * 8
-  const fullBlocks = Math.floor(totalEighths / 8)
-  const partialIndex = Math.floor(totalEighths % 8)
-
-  let bar = '█'.repeat(fullBlocks)
-  if (bar.length < width) {
-    bar += BLOCKS[partialIndex]!
-  }
-  while (bar.length < width) {
-    bar += ' '
-  }
-  return bar.slice(0, width)
+  const fillLen = Math.round(clamped * width)
+  const fill = '▓'.repeat(fillLen)
+  const track = '░'.repeat(width - fillLen)
+  return { fill, track }
 }
 
 // ── Box-drawing ─────────────────────────────────────────────────────────────
@@ -259,7 +251,12 @@ function computeMedals(
 
 // ── Main reporter ───────────────────────────────────────────────────────────
 
-export function consoleReporter(results: BenchmarkResult[]): void {
+export interface ConsoleReporterOptions {
+  sparklines?: boolean
+}
+
+export function consoleReporter(results: BenchmarkResult[], options?: ConsoleReporterOptions): void {
+  const showSparklines = options?.sparklines ?? true
   if (results.length === 0) {
     console.log('\nNo results to display.\n')
     return
@@ -337,7 +334,7 @@ export function consoleReporter(results: BenchmarkResult[]): void {
           : name === 'llm-judge-correctness' ? 'Judge'
           : name === 'tool-usage' ? 'Tool'
           : name
-        cols.push({ label, width: 15, align: 'right', statsKey: name, isScore: true })
+        cols.push({ label, width: showSparklines ? 15 : 8, align: 'right', statsKey: name, isScore: true })
       }
     }
 
@@ -412,13 +409,12 @@ export function consoleReporter(results: BenchmarkResult[]): void {
               cells.push(colStats ? colorByRank(text, tokens, colStats, providers.length) : text)
             }
           } else {
-            // Score column (0-1 scale) with sparkline bar
+            // Score column (0-1 scale) with optional sparkline bar
             const val = pd.avgScores[statsKey]
             if (val === undefined) {
               cells.push(dim('—'))
             } else {
               const pctStr = `${Math.round(val * 100)}%`.padStart(4)
-              const bar = dim(sparkBar(val))
               let coloredPct: string
               if (multi && colStats) {
                 coloredPct = colorByRank(pctStr, val, colStats, providers.length)
@@ -428,7 +424,12 @@ export function consoleReporter(results: BenchmarkResult[]): void {
                 else if (val >= 0.5) coloredPct = `${yellow}${pctStr}${reset}`
                 else coloredPct = `${red}${pctStr}${reset}`
               }
-              cells.push(`${coloredPct} ${bar}`)
+              if (showSparklines) {
+                const { fill, track } = sparkBar(val)
+                cells.push(`${coloredPct} ${fill}${dim(track)}`)
+              } else {
+                cells.push(coloredPct)
+              }
             }
           }
         }
