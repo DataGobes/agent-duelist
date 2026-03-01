@@ -136,7 +136,7 @@ function computeColumnStats(
       values,
       best: nums.length > 0 ? Math.min(...nums) : undefined,
       worst: nums.length > 0 ? Math.max(...nums) : undefined,
-      lowerIsBetter: true,
+
     })
   }
 
@@ -153,13 +153,13 @@ function computeColumnStats(
       values: costValues,
       best: costNums.length > 0 ? Math.min(...costNums) : undefined,
       worst: costNums.length > 0 ? Math.max(...costNums) : undefined,
-      lowerIsBetter: true,
+
     })
     stats.set('tokens', {
       values: tokenValues,
       best: tokenNums.length > 0 ? Math.min(...tokenNums) : undefined,
       worst: tokenNums.length > 0 ? Math.max(...tokenNums) : undefined,
-      lowerIsBetter: true,
+
     })
   }
 
@@ -174,7 +174,7 @@ function computeColumnStats(
       values,
       best: nums.length > 0 ? Math.max(...nums) : undefined,
       worst: nums.length > 0 ? Math.min(...nums) : undefined,
-      lowerIsBetter: false,
+
     })
   }
 
