@@ -3,9 +3,8 @@ export { defineArena } from './arena.js'
 export type { ArenaConfig, Arena } from './arena.js'
 
 // Providers
-export { openai, azureOpenai, openaiCompatible } from './providers/openai.js'
+export { openai, azureOpenai, openaiCompatible, gemini } from './providers/openai.js'
 export { anthropic } from './providers/anthropic.js'
-export { gemini } from './providers/gemini.js'
 export type { ArenaProvider, TaskInput, TaskResult, ToolCall } from './providers/types.js'
 
 // Tasks

@@ -3,6 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { registerPricing } from '../pricing/lookup.js'
 import type { ToolDefinition } from '../tasks/types.js'
 import type { ArenaProvider, TaskInput, TaskResult, ToolCall } from './types.js'
+import { SCHEMA_SYSTEM_MESSAGE, parseSchemaOutput } from './shared.js'
 
 /** Default per-request timeout in ms (60 s). Prevents hanging on unresponsive APIs. */
 export const REQUEST_TIMEOUT_MS = 60_000
@@ -108,7 +109,7 @@ export function makeProvider(
       if (input.schema) {
         params.response_format = { type: 'json_object' }
         params.messages = [
-          { role: 'system', content: 'Respond with valid JSON matching the requested schema.' },
+          { role: 'system', content: SCHEMA_SYSTEM_MESSAGE },
           ...params.messages,
         ]
       }
@@ -177,14 +178,7 @@ export function makeProvider(
         rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>\s*/, '')
       }
 
-      let output: string | Record<string, unknown> = rawContent
-      if (input.schema) {
-        try {
-          output = JSON.parse(rawContent) as Record<string, unknown>
-        } catch {
-          // If JSON parsing fails, fall back to raw string
-        }
-      }
+      const output = parseSchemaOutput(rawContent, !!input.schema)
 
       return {
         output,
@@ -199,6 +193,33 @@ export function makeProvider(
     },
   }
 }
+
+// ── Gemini (OpenAI-compatible) ──────────────────────────────────────
+
+export interface GeminiProviderOptions {
+  apiKey?: string
+  timeoutMs?: number
+}
+
+export function gemini(model: string, options?: GeminiProviderOptions): ArenaProvider {
+  const apiKey = options?.apiKey ?? process.env.GOOGLE_API_KEY
+
+  if (!apiKey) {
+    throw new Error(
+      `Missing API key for google/${model}. Set GOOGLE_API_KEY or pass apiKey option.`,
+    )
+  }
+
+  const client = new OpenAI({
+    apiKey,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    timeout: options?.timeoutMs ?? REQUEST_TIMEOUT_MS,
+  })
+
+  return makeProvider(`google/${model}`, 'Google AI', model, client, model)
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
 
 function toolDefToOpenAI(tool: ToolDefinition): OpenAI.ChatCompletionTool {
   return {

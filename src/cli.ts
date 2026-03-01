@@ -5,7 +5,14 @@ import { resolve, join, dirname } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import type { BenchmarkResult } from './runner.js'
 import type { ScoreResult } from './scorers/types.js'
+import type { Arena } from './arena.js'
 import type { CiOptions } from './ci.js'
+import { consoleReporter } from './reporter/console.js'
+import { jsonReporter } from './reporter/json.js'
+import { markdownReporter, COMMENT_MARKER } from './reporter/markdown.js'
+import { loadBaseline, saveBaseline, computeStats, compareResults } from './ci.js'
+import { detectGitHubContext, upsertPrComment } from './github.js'
+import { formatCost } from './utils/format.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -68,14 +75,11 @@ program
 
       const results = await typedArena.run({ onResult })
 
-      const { consoleReporter } = await import('./reporter/console.js')
-      const { jsonReporter } = await import('./reporter/json.js')
-
       if (opts.reporter === 'json') {
         console.log(jsonReporter(results))
       } else {
         console.log('')
-        consoleReporter(results, { sparklines: typedArena.config?.sparklines })
+        consoleReporter(results, { sparklines: typedArena.config.sparklines })
       }
 
       // Exit with non-zero if every single result errored
@@ -144,7 +148,6 @@ program
     }
 
     // 2. Load baseline (if exists)
-    const { loadBaseline, saveBaseline, computeStats, compareResults } = await import('./ci.js')
     const baseline = loadBaseline(ciOpts.baselinePath)
     const baselineStats = baseline ? computeStats(baseline.results) : null
 
@@ -159,12 +162,10 @@ program
     const report = compareResults(baselineStats, currentStats, ciOpts.thresholds, ciOpts.budget, results)
 
     // 4. Console output
-    const { consoleReporter } = await import('./reporter/console.js')
     console.log('')
-    consoleReporter(results, { sparklines: typedArena.config?.sparklines })
+    consoleReporter(results, { sparklines: typedArena.config.sparklines })
 
     // Print CI verdict
-    const { markdownReporter, COMMENT_MARKER } = await import('./reporter/markdown.js')
     if (report.flakyResults.length > 0) {
       console.log(`⚠  ${report.flakyResults.length} flaky result(s) detected (high variance)`)
     }
@@ -180,7 +181,6 @@ program
 
     // 5. Post PR comment if requested
     if (ciOpts.comment) {
-      const { detectGitHubContext, upsertPrComment } = await import('./github.js')
       const ghCtx = detectGitHubContext()
       if (ghCtx) {
         const markdown = markdownReporter(report, results)
@@ -209,12 +209,7 @@ program
 
 program.parse()
 
-type ArenaRunner = {
-  config?: { sparklines?: boolean }
-  run: (opts?: { onResult?: (r: BenchmarkResult) => void }) => Promise<BenchmarkResult[]>
-}
-
-async function loadArenaConfig(configOpt: string): Promise<ArenaRunner> {
+async function loadArenaConfig(configOpt: string): Promise<Arena> {
   const configPath = resolve(configOpt)
 
   if (!existsSync(configPath)) {
@@ -249,7 +244,7 @@ async function loadArenaConfig(configOpt: string): Promise<ArenaRunner> {
     process.exit(1)
   }
 
-  return arena as ArenaRunner
+  return arena as Arena
 }
 
 function logResult(result: BenchmarkResult): void {
@@ -288,11 +283,7 @@ function formatScoreForLog(s: ScoreResult): string {
     return `${Math.round(details.ms as number)}ms`
   }
   if (s.name === 'cost' && details?.estimatedUsd != null) {
-    const usd = details.estimatedUsd as number
-    if (usd === 0) return '$0.00'
-    if (usd >= 0.01) return `~$${usd.toFixed(2)}`
-    const digits = Math.max(4, -Math.floor(Math.log10(usd)) + 1)
-    return `~$${usd.toFixed(digits).replace(/0+$/, '')}`
+    return formatCost(details.estimatedUsd as number)
   }
   return String(s.value)
 }

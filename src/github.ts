@@ -65,6 +65,15 @@ export function detectGitHubContext(): GitHubContext | null {
 
 const API_BASE = 'https://api.github.com'
 
+function ghHeaders(token: string, extra?: Record<string, string>): Record<string, string> {
+  return {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    ...extra,
+  }
+}
+
 export async function findExistingComment(
   ctx: GitHubContext,
   marker: string,
@@ -74,13 +83,7 @@ export async function findExistingComment(
 
   while (true) {
     const url = `${API_BASE}/repos/${ctx.owner}/${ctx.repo}/issues/${ctx.prNumber}/comments?per_page=${perPage}&page=${page}`
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${ctx.token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    })
+    const res = await fetch(url, { headers: ghHeaders(ctx.token) })
 
     if (!res.ok) return null
 
@@ -112,12 +115,7 @@ export async function upsertPrComment(
     const url = `${API_BASE}/repos/${ctx.owner}/${ctx.repo}/issues/comments/${existingId}`
     const res = await fetch(url, {
       method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${ctx.token}`,
-        Accept: 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
+      headers: ghHeaders(ctx.token, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ body }),
     })
 
@@ -130,12 +128,7 @@ export async function upsertPrComment(
     const url = `${API_BASE}/repos/${ctx.owner}/${ctx.repo}/issues/${ctx.prNumber}/comments`
     const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${ctx.token}`,
-        Accept: 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
+      headers: ghHeaders(ctx.token, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ body }),
     })
 

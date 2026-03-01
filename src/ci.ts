@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import type { BenchmarkResult } from './runner.js'
+import { formatDelta } from './utils/format.js'
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -68,11 +69,13 @@ const T_CRITICAL_95: Record<number, number> = {
   15: 2.131, 20: 2.086, 25: 2.060, 30: 2.042,
 }
 
+const T_CRITICAL_KEYS = Object.keys(T_CRITICAL_95).map(Number).sort((a, b) => a - b)
+
 function tCritical(df: number): number {
   if (df <= 0) return 1.96
   if (T_CRITICAL_95[df] !== undefined) return T_CRITICAL_95[df]!
   // Interpolate between known values or fall back to z-approximation
-  const keys = Object.keys(T_CRITICAL_95).map(Number).sort((a, b) => a - b)
+  const keys = T_CRITICAL_KEYS
   if (df > keys[keys.length - 1]!) return 1.96
   // Find surrounding keys and linearly interpolate
   for (let i = 0; i < keys.length - 1; i++) {
@@ -271,11 +274,6 @@ function detectImprovement(
     return baseline.ci95Lower - current.ci95Upper > threshold
   }
   return current.ci95Lower - baseline.ci95Upper > threshold
-}
-
-function formatDelta(delta: number): string {
-  const sign = delta >= 0 ? '+' : ''
-  return `${sign}${delta.toFixed(4)}`
 }
 
 // ── Baseline I/O ─────────────────────────────────────────────────────

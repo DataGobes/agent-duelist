@@ -44,10 +44,17 @@ function withTimeout<T>(run: (signal: AbortSignal) => Promise<T>, ms: number): P
 export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResult[]> {
   const { providers, tasks, scorers, runs, onResult } = options
   const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
-  const results: BenchmarkResult[] = []
 
-  for (const task of tasks) {
-    for (const provider of providers) {
+  // Build all provider × task combinations for parallel execution
+  const combinations = tasks.flatMap((task, taskIdx) =>
+    providers.map((provider, providerIdx) => ({ task, taskIdx, provider, providerIdx }))
+  )
+
+  // Run combinations in parallel; runs within each combination stay sequential
+  const nested = await Promise.all(
+    combinations.map(async ({ task, taskIdx, provider, providerIdx }) => {
+      const comboResults: (BenchmarkResult & { _taskIdx: number; _providerIdx: number })[] = []
+
       for (let run = 1; run <= runs; run++) {
         let result: BenchmarkResult
 
@@ -88,11 +95,17 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
           }
         }
 
-        results.push(result)
+        comboResults.push({ ...result, _taskIdx: taskIdx, _providerIdx: providerIdx })
         onResult?.(result)
       }
-    }
-  }
 
-  return results
+      return comboResults
+    })
+  )
+
+  // Flatten and sort to match original ordering: task → provider → run
+  return nested
+    .flat()
+    .sort((a, b) => a._taskIdx - b._taskIdx || a._providerIdx - b._providerIdx || a.run - b.run)
+    .map(({ _taskIdx: _, _providerIdx: __, ...result }) => result)
 }

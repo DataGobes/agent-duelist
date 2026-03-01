@@ -1,4 +1,5 @@
 import type { BenchmarkResult } from '../runner.js'
+import { formatCost } from '../utils/format.js'
 
 // ── ANSI color palette ──────────────────────────────────────────────────────
 
@@ -260,15 +261,40 @@ export function consoleReporter(results: BenchmarkResult[], options?: ConsoleRep
     return
   }
 
-  const tasks = [...new Set(results.map((r) => r.taskName))]
-  const providers = [...new Set(results.map((r) => r.providerId))]
-  const scorerNames = [...new Set(results.flatMap((r) => r.scores.map((s) => s.name)))]
+  // Single-pass grouping: collect tasks, providers, scorers, and group results
+  const taskSet = new Set<string>()
+  const providerSet = new Set<string>()
+  const scorerSet = new Set<string>()
+  const grouped = new Map<string, BenchmarkResult[]>() // "task::provider" → results
+  const byProvider = new Map<string, BenchmarkResult[]>()
+  let hasErrors = false
+  let maxRun = 0
+
+  for (const r of results) {
+    taskSet.add(r.taskName)
+    providerSet.add(r.providerId)
+    for (const s of r.scores) scorerSet.add(s.name)
+    if (r.error) hasErrors = true
+    if (r.run > maxRun) maxRun = r.run
+
+    const key = `${r.taskName}::${r.providerId}`
+    let group = grouped.get(key)
+    if (!group) { group = []; grouped.set(key, group) }
+    group.push(r)
+
+    let provGroup = byProvider.get(r.providerId)
+    if (!provGroup) { provGroup = []; byProvider.set(r.providerId, provGroup) }
+    provGroup.push(r)
+  }
+
+  const tasks = [...taskSet]
+  const providers = [...providerSet]
+  const scorerNames = [...scorerSet]
   const hasCost = scorerNames.includes('cost')
-  const hasErrors = results.some((r) => r.error)
   const multi = providers.length >= 2
 
   // Title
-  const runsPerCell = Math.max(...results.map((r) => r.run))
+  const runsPerCell = maxRun
   const runLabel = runsPerCell > 1 ? `  ${dim(`(${runsPerCell} runs each)`)}` : ''
   console.log('')
   console.log(`  ${brightWhite}${boldCode}⬡  Agent Duelist${reset}${runLabel}`)
@@ -280,9 +306,9 @@ export function consoleReporter(results: BenchmarkResult[], options?: ConsoleRep
     console.log(`  ${bold(`Task: ${task}`)}`)
     console.log('')
 
-    // Gather per-provider data for this task
+    // Gather per-provider data for this task (using pre-grouped map)
     const providerData: ProviderTaskData[] = providers.map(providerId => {
-      const taskResults = results.filter(r => r.taskName === task && r.providerId === providerId)
+      const taskResults = grouped.get(`${task}::${providerId}`) ?? []
       const errorResults = taskResults.filter(r => r.error)
       const successResults = taskResults.filter(r => !r.error)
 
@@ -453,7 +479,7 @@ export function consoleReporter(results: BenchmarkResult[], options?: ConsoleRep
   }
 
   // Summary
-  printSummary(results, providers)
+  printSummary(results, providers, byProvider)
 
   // Errors — deduplicate by provider + error message and add hints
   const errorResults = results.filter((r) => r.error)
@@ -485,9 +511,15 @@ export function consoleReporter(results: BenchmarkResult[], options?: ConsoleRep
 
 // ── Summary section ─────────────────────────────────────────────────────────
 
-function printSummary(results: BenchmarkResult[], providers: string[]) {
+function printSummary(results: BenchmarkResult[], providers: string[], byProvider: Map<string, BenchmarkResult[]>) {
   const successResults = results.filter((r) => !r.error)
   if (successResults.length === 0) return
+
+  // Pre-compute success results per provider from the grouped map
+  const successByProvider = new Map<string, BenchmarkResult[]>()
+  for (const id of providers) {
+    successByProvider.set(id, (byProvider.get(id) ?? []).filter((r) => !r.error))
+  }
 
   console.log(`  ${bold('Summary')}`)
   console.log(`  ${dim('━'.repeat(72))}`)
@@ -500,7 +532,7 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
     ? 'llm-judge-correctness'
     : 'correctness'
 
-  const byCorrectness = rankProviders(successResults, providers, correctnessKey)
+  const byCorrectness = rankProviders(successByProvider, providers, correctnessKey)
   if (byCorrectness) {
     const medal = single ? `${cyan}◆${reset}` : '🥇'
     const pctStr = `${Math.round(byCorrectness.avg * 100)}%`
@@ -514,7 +546,7 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
   // Fastest
   const byLatency = providers
     .map((id) => {
-      const runs = successResults.filter((r) => r.providerId === id)
+      const runs = successByProvider.get(id) ?? []
       const avg = average(runs.map((r) => r.raw.latencyMs))
       return { id, avg: avg ?? Infinity }
     })
@@ -533,7 +565,7 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
   // Cheapest
   const byCost = providers
     .map((id) => {
-      const runs = successResults.filter((r) => r.providerId === id)
+      const runs = successByProvider.get(id) ?? []
       const costs = runs
         .map((r) => {
           const s = r.scores.find((s) => s.name === 'cost')
@@ -584,10 +616,10 @@ function printSummary(results: BenchmarkResult[], providers: string[]) {
 
 // ── Pure data functions (unchanged) ─────────────────────────────────────────
 
-function rankProviders(results: BenchmarkResult[], providers: string[], scorerName: string) {
+function rankProviders(successByProvider: Map<string, BenchmarkResult[]>, providers: string[], scorerName: string) {
   const ranked = providers
     .map((id) => {
-      const runs = results.filter((r) => r.providerId === id)
+      const runs = successByProvider.get(id) ?? []
       const scores = runs
         .flatMap((r) => r.scores.filter((s) => s.name === scorerName && s.value >= 0))
         .map((s) => s.value)
@@ -658,14 +690,6 @@ function average(nums: number[]): number | undefined {
   return nums.reduce((a, b) => a + b, 0) / nums.length
 }
 
-function formatCost(usd: number | undefined): string {
-  if (usd === undefined) return '—'
-  if (usd === 0) return '$0.00'
-  if (usd >= 0.01) return `~$${usd.toFixed(2)}`
-  // Adaptive precision: always 2 significant figures, always in dollars
-  const digits = Math.max(4, -Math.floor(Math.log10(usd)) + 1)
-  return `~$${usd.toFixed(digits).replace(/0+$/, '')}`
-}
 
 function apiKeyHint(providerId: string, error: string): string | undefined {
   const lower = error.toLowerCase()

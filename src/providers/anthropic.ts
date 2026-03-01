@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { ArenaProvider, TaskInput, TaskResult } from './types.js'
+import { SCHEMA_SYSTEM_MESSAGE, parseSchemaOutput } from './shared.js'
 
 export interface AnthropicProviderOptions {
   apiKey?: string
@@ -21,9 +22,7 @@ export function anthropic(model: string, options?: AnthropicProviderOptions): Ar
     async run(input: TaskInput): Promise<TaskResult> {
       const start = Date.now()
 
-      const systemMessage = input.schema
-        ? 'Respond with valid JSON matching the requested schema.'
-        : undefined
+      const systemMessage = input.schema ? SCHEMA_SYSTEM_MESSAGE : undefined
 
       const response = await client.messages.create({
         model,
@@ -37,14 +36,7 @@ export function anthropic(model: string, options?: AnthropicProviderOptions): Ar
       const textBlock = response.content.find((b) => b.type === 'text')
       const rawContent = textBlock?.type === 'text' ? textBlock.text : ''
 
-      let output: string | Record<string, unknown> = rawContent
-      if (input.schema) {
-        try {
-          output = JSON.parse(rawContent) as Record<string, unknown>
-        } catch {
-          // fall back to raw string
-        }
-      }
+      const output = parseSchemaOutput(rawContent, !!input.schema)
 
       return {
         output,

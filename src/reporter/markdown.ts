@@ -1,5 +1,6 @@
 import type { CiReport, ScorerComparison, CostSummary, ScorerStats } from '../ci.js'
 import type { BenchmarkResult } from '../runner.js'
+import { formatDelta } from '../utils/format.js'
 
 export const COMMENT_MARKER = '<!-- duelist-ci-report -->'
 
@@ -60,7 +61,7 @@ export function markdownComparisonTable(comparisons: ScorerComparison[]): string
   for (const c of comparisons) {
     const baselineStr = c.baseline ? formatStats(c.baseline) : '—'
     const currentStr = formatStats(c.current)
-    const deltaStr = c.delta !== null ? formatDelta(c.delta) : '—'
+    const deltaStr = c.delta !== null ? formatDelta(c.delta, 3) : '—'
     const status = statusIndicator(c)
 
     lines.push(`| ${c.providerId} | ${c.taskName} | ${c.scorerName} | ${baselineStr} | ${currentStr} | ${deltaStr} | ${status} |`)
@@ -100,11 +101,6 @@ function formatStats(stats: ScorerStats): string {
     return `${stats.mean.toFixed(3)} ± ${margin.toFixed(3)}`
   }
   return stats.mean.toFixed(3)
-}
-
-function formatDelta(delta: number): string {
-  const sign = delta >= 0 ? '+' : ''
-  return `${sign}${delta.toFixed(3)}`
 }
 
 function statusIndicator(c: ScorerComparison): string {
