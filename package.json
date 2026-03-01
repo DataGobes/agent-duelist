@@ -1,6 +1,6 @@
 {
   "name": "agent-duelist",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Pit LLM providers against each other on agent tasks.",
   "license": "MIT",
   "type": "module",
