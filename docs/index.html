@@ -1055,8 +1055,24 @@
   nextBtn.addEventListener('click', function() { goTo(current + 1, 1); });
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1, 1); }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(current - 1, -1); }
+    // Respect other handlers and avoid breaking native behavior on interactive elements
+    if (e.defaultPrevented) return;
+
+    var target = e.target;
+    if (target && (
+      target.closest('input, textarea, button, select, a') ||
+      target.isContentEditable
+    )) {
+      return;
+    }
+
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      goTo(current + 1, 1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      goTo(current - 1, -1);
+    }
   });
 
   renderDots();
