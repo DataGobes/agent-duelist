@@ -5,6 +5,7 @@ import { resolve, join, dirname } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import type { BenchmarkResult } from './runner.js'
 import type { ScoreResult } from './scorers/types.js'
+import type { CiOptions } from './ci.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -53,60 +54,17 @@ program
   .option('--reporter <type>', 'Output format: console or json', 'console')
   .option('-q, --quiet', 'Suppress per-result progress (show only final report)')
   .action(async (opts: { config: string; reporter: string; quiet?: boolean }) => {
-    const configPath = resolve(opts.config)
-
-    if (!existsSync(configPath)) {
-      console.error(`Config not found: ${configPath}`)
-      console.error('')
-      console.error('Create one with: npx duelist init')
-      process.exit(1)
-    }
-
     if (!['console', 'json'].includes(opts.reporter)) {
       console.error(`Unknown reporter "${opts.reporter}". Use "console" or "json".`)
       process.exit(1)
     }
 
-    let mod: Record<string, unknown>
-    try {
-      if (configPath.endsWith('.ts')) {
-        mod = await importTypeScript(configPath)
-      } else {
-        mod = (await import(pathToFileURL(configPath).href)) as Record<string, unknown>
-      }
-    } catch (err) {
-      console.error(`Failed to load config: ${configPath}`)
-      console.error('')
-      if (err instanceof SyntaxError) {
-        console.error(`Syntax error: ${err.message}`)
-      } else {
-        console.error(err instanceof Error ? err.message : String(err))
-      }
-      process.exit(1)
-    }
-
-    const arena = mod.default ?? mod.arena
-    if (!arena || typeof arena !== 'object' || !('run' in arena)) {
-      console.error('Config must export a default arena created with defineArena().')
-      console.error(`Loaded from: ${configPath}`)
-      process.exit(1)
-    }
+    const typedArena = await loadArenaConfig(opts.config)
 
     try {
-      const typedArena = arena as { run: (opts?: { onResult?: (r: BenchmarkResult) => void }) => Promise<BenchmarkResult[]> }
-
       // Live progress: show per-result lines unless --quiet or json
       const showProgress = opts.reporter === 'console' && !opts.quiet
-      const onResult = showProgress
-        ? (result: BenchmarkResult) => {
-            if (result.error) {
-              console.log(`  ${result.providerId} × ${result.taskName}: ERROR ${result.error}`)
-            } else {
-              const scores = result.scores.map((s) => `${s.name}=${formatScoreForLog(s)}`).join(' ')
-              console.log(`  ${result.providerId} × ${result.taskName}: ${scores}`)
-            }
-          }
-        : undefined
+      const onResult = showProgress ? logResult : undefined
 
       const results = await typedArena.run({ onResult })
 
@@ -130,7 +88,175 @@ program
     }
   })
 
+// ── CI command ───────────────────────────────────────────────────────
+
+function collectThreshold(value: string, previous: Map<string, number>): Map<string, number> {
+  const [scorer, delta] = value.split('=')
+  if (!scorer || delta === undefined || isNaN(Number(delta))) {
+    console.error(`Invalid threshold format: "${value}". Expected scorer=delta (e.g., correctness=0.1)`)
+    process.exit(1)
+  }
+  previous.set(scorer, Number(delta))
+  return previous
+}
+
+program
+  .command('ci')
+  .description('Run benchmarks, compare against baseline, and enforce quality gates')
+  .option('-c, --config <path>', 'Path to config file', 'arena.config.ts')
+  .option('--baseline <path>', 'Baseline JSON file', '.duelist/baseline.json')
+  .option('--budget <dollars>', 'Max total cost in USD', parseFloat)
+  .option('--threshold <scorer=delta>', 'Regression threshold (repeatable)', collectThreshold, new Map<string, number>())
+  .option('--update-baseline', 'Save results as new baseline after passing')
+  .option('--comment', 'Post results as GitHub PR comment')
+  .option('-q, --quiet', 'Suppress per-result progress')
+  .action(async (opts: {
+    config: string
+    baseline: string
+    budget?: number
+    threshold: Map<string, number>
+    updateBaseline?: boolean
+    comment?: boolean
+    quiet?: boolean
+  }) => {
+    const ciOpts: CiOptions = {
+      configPath: opts.config,
+      baselinePath: resolve(opts.baseline),
+      budget: opts.budget,
+      thresholds: opts.threshold,
+      updateBaseline: opts.updateBaseline ?? false,
+      comment: opts.comment ?? false,
+      quiet: opts.quiet ?? false,
+    }
+
+    const typedArena = await loadArenaConfig(ciOpts.configPath)
+
+    // 1. Run benchmarks
+    console.log('Running benchmarks...')
+    const onResult = ciOpts.quiet ? undefined : logResult
+    let results: BenchmarkResult[]
+    try {
+      results = await typedArena.run({ onResult })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error(`Benchmark failed: ${message}`)
+      process.exit(1)
+    }
+
+    // 2. Load baseline (if exists)
+    const { loadBaseline, saveBaseline, computeStats, compareResults } = await import('./ci.js')
+    const baseline = loadBaseline(ciOpts.baselinePath)
+    const baselineStats = baseline ? computeStats(baseline.results) : null
+
+    if (baseline) {
+      console.log(`Loaded baseline from ${ciOpts.baselinePath} (${baseline.timestamp})`)
+    } else {
+      console.log('No baseline found — this run establishes the first baseline.')
+    }
+
+    // 3. Compare
+    const currentStats = computeStats(results)
+    const report = compareResults(baselineStats, currentStats, ciOpts.thresholds, ciOpts.budget, results)
+
+    // 4. Console output
+    const { consoleReporter } = await import('./reporter/console.js')
+    console.log('')
+    consoleReporter(results)
+
+    // Print CI verdict
+    const { markdownReporter, COMMENT_MARKER } = await import('./reporter/markdown.js')
+    if (report.flakyResults.length > 0) {
+      console.log(`⚠  ${report.flakyResults.length} flaky result(s) detected (high variance)`)
+    }
+    if (report.cost.overBudget) {
+      console.log(`🔴 Budget exceeded: $${report.cost.totalUsd.toFixed(4)} > $${report.cost.budget!.toFixed(2)}`)
+    }
+    for (const reason of report.failureReasons) {
+      console.log(`🔴 ${reason}`)
+    }
+    if (!report.failed) {
+      console.log('🟢 CI passed')
+    }
+
+    // 5. Post PR comment if requested
+    if (ciOpts.comment) {
+      const { detectGitHubContext, upsertPrComment } = await import('./github.js')
+      const ghCtx = detectGitHubContext()
+      if (ghCtx) {
+        const markdown = markdownReporter(report, results)
+        try {
+          await upsertPrComment(ghCtx, markdown, COMMENT_MARKER)
+          console.log('Posted results to PR comment.')
+        } catch (err) {
+          console.warn(`Failed to post PR comment: ${err instanceof Error ? err.message : err}`)
+        }
+      } else {
+        console.warn('--comment: not in a GitHub Actions PR context, skipping.')
+      }
+    }
+
+    // 6. Update baseline if passing and requested
+    if (ciOpts.updateBaseline && !report.failed) {
+      saveBaseline(ciOpts.baselinePath, results)
+      console.log(`Baseline saved to ${ciOpts.baselinePath}`)
+    } else if (ciOpts.updateBaseline && report.failed) {
+      console.log('Baseline not updated (CI failed).')
+    }
+
+    // 7. Exit code
+    process.exit(report.failed ? 1 : 0)
+  })
+
 program.parse()
+
+type ArenaRunner = { run: (opts?: { onResult?: (r: BenchmarkResult) => void }) => Promise<BenchmarkResult[]> }
+
+async function loadArenaConfig(configOpt: string): Promise<ArenaRunner> {
+  const configPath = resolve(configOpt)
+
+  if (!existsSync(configPath)) {
+    console.error(`Config not found: ${configPath}`)
+    console.error('')
+    console.error('Create one with: npx duelist init')
+    process.exit(1)
+  }
+
+  let mod: Record<string, unknown>
+  try {
+    if (configPath.endsWith('.ts')) {
+      mod = await importTypeScript(configPath)
+    } else {
+      mod = (await import(pathToFileURL(configPath).href)) as Record<string, unknown>
+    }
+  } catch (err) {
+    console.error(`Failed to load config: ${configPath}`)
+    console.error('')
+    if (err instanceof SyntaxError) {
+      console.error(`Syntax error: ${err.message}`)
+    } else {
+      console.error(err instanceof Error ? err.message : String(err))
+    }
+    process.exit(1)
+  }
+
+  const arena = mod.default ?? mod.arena
+  if (!arena || typeof arena !== 'object' || !('run' in arena)) {
+    console.error('Config must export a default arena created with defineArena().')
+    console.error(`Loaded from: ${configPath}`)
+    process.exit(1)
+  }
+
+  return arena as ArenaRunner
+}
+
+function logResult(result: BenchmarkResult): void {
+  if (result.error) {
+    console.log(`  ${result.providerId} × ${result.taskName}: ERROR ${result.error}`)
+  } else {
+    const scores = result.scores.map((s) => `${s.name}=${formatScoreForLog(s)}`).join(' ')
+    console.log(`  ${result.providerId} × ${result.taskName}: ${scores}`)
+  }
+}
 
 async function importTypeScript(filePath: string): Promise<Record<string, unknown>> {
   try {
@@ -193,12 +319,12 @@ import { z } from 'zod'
 
 export default defineArena({
   providers: [
-    openai('gpt-4o-mini'),
+    openai('gpt-5-mini'),
     // Add more providers to compare:
-    // openai('gpt-4o'),
-    // azureOpenai('gpt-4o-mini'),
-    // anthropic('claude-sonnet-4-20250514'),
-    // gemini('gemini-2.5-flash'),
+    // openai('gpt-5.2'),
+    // azureOpenai('gpt-5-mini'),
+    // anthropic('claude-sonnet-4.6'),
+    // gemini('gemini-3-flash-preview'),
   ],
 
   tasks: [

@@ -14,12 +14,12 @@ import { z } from 'zod'
 
 export default defineArena({
   providers: [
-    openai('gpt-4o-mini'),
+    openai('gpt-5-mini'),
     // Add more providers to compare:
-    // openai('gpt-4o'),
-    // azureOpenai('gpt-4o-mini'),
-    // anthropic('claude-sonnet-4-20250514'),
-    // gemini('gemini-2.5-flash'),
+    // openai('gpt-5.2'),
+    // azureOpenai('gpt-5-mini'),
+    // anthropic('claude-sonnet-4.6'),
+    // gemini('gemini-3-flash-preview'),
   ],
 
   tasks: [

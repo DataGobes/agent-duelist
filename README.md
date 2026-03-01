@@ -64,8 +64,8 @@ import { z } from 'zod'
 
 export default defineArena({
   providers: [
-    openai('gpt-4o'),
-    azureOpenai('gpt-4o', { deployment: 'my-azure-deployment' }),
+    openai('gpt-5-mini'),
+    azureOpenai('gpt-5-mini', { deployment: 'my-azure-deployment' }),
   ],
   tasks: [
     {
@@ -98,7 +98,7 @@ npx duelist run
 You'll see a matrix like:
 
 - Rows: tasks (`simple-qa`, `structured-extraction`)
-- Columns: providers (`openai/gpt-4o`, `azure/gpt-4o`)
+- Columns: providers (`openai/gpt-5-mini`, `azure/gpt-5-mini`)
 - Cells: correctness score, latency, tokens, and estimated cost.
 
 For CI or further processing:
@@ -133,21 +133,21 @@ import {
   type ArenaProvider,
 } from 'agent-duelist'
 
-const oai = openai('gpt-4o')
+const oai = openai('gpt-5-mini')
 
-const azure = azureOpenai('gpt-4o', {
+const azure = azureOpenai('gpt-5-mini', {
   deployment: 'my-deployment',
 })
 
-const claude = anthropic('claude-sonnet-4-20250514')
+const claude = anthropic('claude-sonnet-4.6')
 
-const gem = gemini('gemini-2.5-flash') // uses GOOGLE_API_KEY
+const gem = gemini('gemini-3-flash-preview') // uses GOOGLE_API_KEY
 
 const local: ArenaProvider = openaiCompatible({
-  id: 'local/gpt-4o-like',
+  id: 'local/llama',
   name: 'Local Gateway',
   baseURL: 'http://localhost:11434/v1',
-  model: 'gpt-4o',
+  model: 'llama3.3',
   apiKeyEnv: 'LOCAL_LLM_API_KEY',
 })
 ```
@@ -156,7 +156,7 @@ At minimum, a provider implements:
 
 ```ts
 interface ArenaProvider {
-  id: string        // e.g. 'openai/gpt-4o'
+  id: string        // e.g. 'openai/gpt-5-mini'
   name: string      // e.g. 'OpenAI'
   model: string
   run(input: TaskInput): Promise<TaskResult>
@@ -230,7 +230,7 @@ defineArena({
 })
 ```
 
-The judge model defaults to `gpt-4o-mini`. It can also be set via the `DUELIST_JUDGE_MODEL` env var. The judge backend is auto-detected from the model name — `gemini-*` models use Google's API, otherwise it falls back to OpenAI or Azure OpenAI.
+The judge model defaults to `gpt-5-mini`. It can also be set via the `DUELIST_JUDGE_MODEL` env var. The judge backend is auto-detected from the model name — `gemini-*` models use Google's API, otherwise it falls back to OpenAI or Azure OpenAI.
 
 You can also add custom scorers for domain-specific metrics (e.g. tool-call correctness, safety, style).
 
@@ -247,7 +247,7 @@ Cost estimation is intentionally transparent and conservative:
    `agent-duelist` ships with a **locally bundled catalog** of per-token prices for many models, derived from OpenRouter's public pricing pages.
 
    - The catalog maps `(provider, model)` → `{ inputPerM, outputPerM }` in USD per 1M tokens.
-   - Azure OpenAI models are resolved back to their base OpenAI models where possible (e.g. `azure/gpt-4o` → `openai/gpt-4o`) so you don't need to configure Azure pricing manually.
+   - Azure OpenAI models are resolved back to their base OpenAI models where possible (e.g. `azure/gpt-5-mini` → `openai/gpt-5-mini`) so you don't need to configure Azure pricing manually.
 
 3. **Estimated USD**  
    The `cost` scorer computes:
@@ -274,12 +274,19 @@ You can update the catalog with a script that re-scrapes OpenRouter's public pri
 
 ## CLI usage
 
-Basic commands:
+### `duelist init`
+
+Scaffold a new `arena.config.ts` in the current directory.
 
 ```bash
-# Scaffold a new config
 npx duelist init
+```
 
+### `duelist run`
+
+Run benchmarks defined in your arena config.
+
+```bash
 # Run with the default config (arena.config.ts)
 npx duelist run
 
@@ -288,12 +295,48 @@ npx duelist run --config path/to/arena.config.ts
 
 # Get JSON instead of a table
 npx duelist run --reporter json
+
+# Suppress per-result progress lines
+npx duelist run --quiet
 ```
 
-Options (subject to change as the project evolves):
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Path to config file (default: `arena.config.ts`) |
+| `--reporter <type>` | Output format: `console` (default) or `json` |
+| `-q, --quiet` | Suppress per-result progress |
 
-- `--config` — path to a config file (TypeScript).
-- `--reporter` — `console` (default) or `json`.
+### `duelist ci`
+
+Run benchmarks, compare against a baseline, and enforce quality gates. Exits non-zero if regressions are detected or cost exceeds the budget.
+
+```bash
+# First run — establishes the baseline
+npx duelist ci --update-baseline
+
+# Subsequent runs — compare against baseline
+npx duelist ci --threshold correctness=0.1 --budget 1.00
+
+# Post comparison table as a PR comment (GitHub Actions)
+npx duelist ci --threshold correctness=0.1 --comment
+```
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config <path>` | Path to config file (default: `arena.config.ts`) |
+| `--baseline <path>` | Baseline JSON file (default: `.duelist/baseline.json`) |
+| `--budget <dollars>` | Max total cost in USD — fails if exceeded |
+| `--threshold <scorer=delta>` | Regression threshold (repeatable, e.g. `--threshold correctness=0.1 --threshold cost=0.002`) |
+| `--update-baseline` | Save results as new baseline after passing |
+| `--comment` | Post markdown comparison table as a GitHub PR comment |
+| `-q, --quiet` | Suppress per-result progress |
+
+**How regression detection works:**
+
+- With `runs > 1`, the CI uses 95% confidence intervals (t-distribution) — a scorer only regresses if the confidence intervals don't overlap beyond the threshold. This avoids false positives from noisy LLM outputs.
+- With `runs === 1`, it uses a simple delta comparison.
+- Without `--threshold` flags, regression detection is skipped entirely — only `--budget` is enforced.
+- Results with high variance (CV > 0.3) are flagged as **flaky** with a warning.
 
 The CLI loads TypeScript configs directly using a lightweight runtime loader so users don't need to precompile their config.
 
@@ -403,7 +446,7 @@ const weatherTool = {
 }
 
 export default defineArena({
-  providers: [openai('gpt-4o')],
+  providers: [openai('gpt-5-mini')],
   tasks: [
     {
       name: 'weather-tool-call',
@@ -421,6 +464,57 @@ The model calls `getCurrentWeather`, the handler returns a stub result, and the 
 
 ---
 
+## CI / GitHub Actions
+
+`duelist ci` is designed to run as a quality gate in your CI pipeline. It compares benchmark results against a saved baseline and fails the build if quality regresses or costs exceed a budget.
+
+### GitHub Action
+
+The easiest way to add eval quality gates to your PR workflow:
+
+```yaml
+# .github/workflows/eval.yml
+name: LLM Eval
+on: [pull_request]
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DataGobes/agent-duelist/.github/actions/duelist-ci@main
+        with:
+          budget: '1.00'
+          thresholds: 'correctness=0.1'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+The action handles Node.js setup, runs `duelist ci`, posts a comparison table as a PR comment, and optionally commits an updated baseline.
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `config` | `arena.config.ts` | Path to arena config file |
+| `baseline` | `.duelist/baseline.json` | Path to baseline JSON file |
+| `budget` | — | Max total cost in USD |
+| `thresholds` | — | Space-separated `scorer=delta` pairs |
+| `update-baseline` | `false` | Save results as new baseline after passing |
+| `comment` | `true` | Post results as PR comment |
+| `node-version` | `20` | Node.js version to use |
+
+### PR comment output
+
+When `--comment` is enabled, the CI posts (or updates) a markdown table on the PR:
+
+| Provider | Task | Scorer | Baseline | Current | Delta | Status |
+|----------|------|--------|----------|---------|-------|--------|
+| openai/gpt-5-mini | extract | correctness | 0.900 | 0.850 | -0.050 | ⚪ unchanged |
+| openai/gpt-5-mini | extract | latency | 0.920 ± 0.030 | 0.890 ± 0.025 | -0.030 | ⚪ unchanged |
+
+With cost summary, flakiness warnings, and pass/fail verdict.
+
+---
+
 ## Roadmap
 
 Shipped so far:
@@ -430,6 +524,9 @@ Shipped so far:
 - Tool-calling support with local handlers for agent task benchmarking
 - Colored console reporter with per-task tables and cross-provider summary
 - JSON reporter for CI/pipeline integration
+- Markdown reporter for PR comments
+- `duelist ci` command with regression detection, cost budgets, and flakiness warnings
+- GitHub Action for CI/CD integration
 - Pricing catalog from OpenRouter with refresh script
 
 Planned directions (subject to community feedback):
@@ -437,8 +534,7 @@ Planned directions (subject to community feedback):
 - **More providers**
   - OpenRouter-native and more OpenAI-compatible gateways.
 - **Better reporting**
-  - Markdown/HTML/CSV reports.
-  - GitHub Actions summaries.
+  - HTML and CSV export options.
 - **Agent workflows**
   - Multi-step tool chains, multi-hop reasoning, and agent traces.
 - **Plugin system**

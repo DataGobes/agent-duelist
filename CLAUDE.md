@@ -18,7 +18,9 @@ src/
   index.ts           → public API exports
   arena.ts           → defineArena() and ArenaConfig
   runner.ts          → orchestrates provider × task × runs
-  cli.ts             → CLI entry (commander)
+  cli.ts             → CLI entry (commander): init, run, ci subcommands
+  ci.ts              → CI logic: stats, regression detection, cost summary, baseline I/O
+  github.ts          → GitHub PR comment helper (context detection + upsert)
   providers/
     types.ts         → ArenaProvider, TaskInput, TaskResult
     openai.ts        → OpenAI provider factory
@@ -33,6 +35,7 @@ src/
   reporter/
     console.ts       → CLI table output
     json.ts          → JSON output
+    markdown.ts      → Markdown comparison table (PR comments)
 ```
 
 ## Key patterns
@@ -41,6 +44,9 @@ src/
 - Scorers are pure functions: `(ScorerContext) → ScoreResult`
 - `defineArena()` validates config and returns `{ run() }` which orchestrates everything
 - All `.js` extensions in imports (ESM compat with bundler moduleResolution)
+- CI functions in `ci.ts` are pure (no side effects) except `loadBaseline`/`saveBaseline`
+- GitHub integration uses Node 18 built-in `fetch` — zero new dependencies
+- `cli.ts` uses `loadArenaConfig()` shared helper for both `run` and `ci` commands
 
 ## Adding a new provider
 

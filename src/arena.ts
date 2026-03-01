@@ -11,7 +11,7 @@ export interface ArenaConfig {
   tasks: ArenaTask[]
   scorers?: BuiltInScorerName[]
   runs?: number
-  /** Model to use for llm-judge-correctness (e.g. 'gemini-3.1-pro-preview'). Falls back to DUELIST_JUDGE_MODEL env var, then gpt-4o-mini. */
+  /** Model to use for llm-judge-correctness (e.g. 'gemini-3.1-pro-preview'). Falls back to DUELIST_JUDGE_MODEL env var, then gpt-5-mini. */
   judgeModel?: string
 }
 
