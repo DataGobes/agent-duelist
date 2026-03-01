@@ -673,15 +673,13 @@
             <span class="terminal-title">arena.config.ts</span>
           </div>
           <div class="terminal-body">
-<div class="t-line t-dim">import { defineArena, openai } from "agent-duelist"</div>
+<div class="t-line t-dim">import { defineArena, openai, anthropic } from "agent-duelist"</div>
 <div class="t-line t-dim">import { z } from "zod"</div>
 <div class="t-line">&nbsp;</div>
 <div class="t-line">export default <span class="t-accent">defineArena</span>({</div>
 <div class="t-line">  providers: [</div>
 <div class="t-line">    openai(<span class="t-green">"gpt-5-mini"</span>),</div>
-<div class="t-line">    openai(<span class="t-green">"claude-sonnet-4.6"</span>, {</div>
-<div class="t-line">      baseURL: <span class="t-green">"https://api.anthropic.com/v1"</span></div>
-<div class="t-line">    }),</div>
+<div class="t-line">    anthropic(<span class="t-green">"claude-sonnet-4.6"</span>),</div>
 <div class="t-line">  ],</div>
 <div class="t-line">  tasks: [{</div>
 <div class="t-line">    name: <span class="t-green">"extract-company"</span>,</div>
