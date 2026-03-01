@@ -163,7 +163,7 @@ program
 
     // 4. Console output
     console.log('')
-    consoleReporter(results, { sparklines: typedArena.config.sparklines })
+    consoleReporter(results, { sparklines: typedArena.config?.sparklines ?? true })
 
     // Print CI verdict
     if (report.flakyResults.length > 0) {
