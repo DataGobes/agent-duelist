@@ -20,7 +20,7 @@ export type { ScoreResult, ScorerFn, BuiltInScorerName } from './scorers/types.j
 export type { BenchmarkResult } from './runner.js'
 
 // Reporters
-export { consoleReporter, jsonReporter, markdownReporter } from './reporter/index.js'
+export { consoleReporter, jsonReporter, markdownReporter, htmlReporter } from './reporter/index.js'
 
 // CI
 export { compareResults, computeStats, loadBaseline, saveBaseline } from './ci.js'

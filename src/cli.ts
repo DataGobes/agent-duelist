@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { Command } from 'commander'
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { resolve, join, dirname } from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import type { BenchmarkResult } from './runner.js'
@@ -10,6 +10,7 @@ import type { CiOptions } from './ci.js'
 import { consoleReporter } from './reporter/console.js'
 import { jsonReporter } from './reporter/json.js'
 import { markdownReporter, COMMENT_MARKER } from './reporter/markdown.js'
+import { htmlReporter } from './reporter/html.js'
 import { loadBaseline, saveBaseline, computeStats, compareResults } from './ci.js'
 import { detectGitHubContext, upsertPrComment } from './github.js'
 import { formatCost } from './utils/format.js'
@@ -58,11 +59,12 @@ program
   .command('run')
   .description('Run benchmarks defined in your arena config')
   .option('-c, --config <path>', 'Path to config file', 'arena.config.ts')
-  .option('--reporter <type>', 'Output format: console or json', 'console')
+  .option('--reporter <type>', 'Output format: console, json, or html', 'console')
+  .option('--output <path>', 'Output file path (used with html reporter)', 'duelist-report.html')
   .option('-q, --quiet', 'Suppress per-result progress (show only final report)')
-  .action(async (opts: { config: string; reporter: string; quiet?: boolean }) => {
-    if (!['console', 'json'].includes(opts.reporter)) {
-      console.error(`Unknown reporter "${opts.reporter}". Use "console" or "json".`)
+  .action(async (opts: { config: string; reporter: string; output: string; quiet?: boolean }) => {
+    if (!['console', 'json', 'html'].includes(opts.reporter)) {
+      console.error(`Unknown reporter "${opts.reporter}". Use "console", "json", or "html".`)
       process.exit(1)
     }
 
@@ -70,13 +72,19 @@ program
 
     try {
       // Live progress: show per-result lines unless --quiet or json
-      const showProgress = opts.reporter === 'console' && !opts.quiet
+      const showProgress = opts.reporter !== 'json' && !opts.quiet
       const onResult = showProgress ? logResult : undefined
 
       const results = await typedArena.run({ onResult })
 
       if (opts.reporter === 'json') {
         console.log(jsonReporter(results))
+      } else if (opts.reporter === 'html') {
+        const html = htmlReporter(results)
+        const outPath = resolve(opts.output)
+        mkdirSync(dirname(outPath), { recursive: true })
+        writeFileSync(outPath, html)
+        console.log(`\nHTML report written to ${outPath}`)
       } else {
         console.log('')
         consoleReporter(results, { sparklines: typedArena.config?.sparklines })

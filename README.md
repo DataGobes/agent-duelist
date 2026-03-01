@@ -11,7 +11,8 @@
 
 ## What you get
 > ![Agent Duelist console output](docs/assets/screenshot.png)
-
+>
+> ![Agent Duelist HTML report](docs/assets/screenshot-html.png)
 
 - Compare OpenAI, Azure OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible gateway.
 - Define tasks once, run them against many providers.
@@ -108,6 +109,12 @@ For CI or further processing:
 
 ```bash
 npx duelist run --reporter json > results.json
+```
+
+Generate a shareable HTML report:
+
+```bash
+npx duelist run --reporter html --output report.html
 ```
 
 ---
