@@ -10,7 +10,7 @@
 `agent-duelist` is a TypeScript-first framework to pit multiple LLM providers against each other on the same tasks and get structured, reproducible results: correctness, latency, tokens, and cost.
 
 ## What you get
-> <img width="739" height="473" alt="image" src="https://github.com/user-attachments/assets/41149222-1035-42fd-b643-4f8b856c30a0" />
+> ![Agent Duelist console output](docs/assets/screenshot.png)
 
 
 - Compare OpenAI, Azure OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible gateway.
@@ -239,6 +239,33 @@ You can also add custom scorers for domain-specific metrics (e.g. tool-call corr
 
 ---
 
+### Arena options
+
+`defineArena()` accepts these top-level options alongside `providers`, `tasks`, and `scorers`:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `runs` | `number` | `1` | Number of runs per provider × task combination. Higher values improve statistical confidence for CI regression detection. |
+| `judgeModel` | `string` | `'gpt-5-mini'` | Model used by the `llm-judge-correctness` scorer. Also settable via `DUELIST_JUDGE_MODEL` env var. Gemini models auto-route to Google's API. |
+| `timeout` | `number` | `60000` | Per-request timeout in milliseconds. Requests exceeding this are marked as failures. Prevents hanging on unresponsive APIs. |
+| `sparklines` | `boolean` | `true` | Show sparkline bars next to percentage scores in the console reporter. Disable with `false` if your terminal doesn't render Unicode block characters well. |
+
+Example with all options:
+
+```ts
+export default defineArena({
+  providers: [openai('gpt-5-mini'), gemini('gemini-3-flash-preview')],
+  tasks: [/* ... */],
+  scorers: ['latency', 'cost', 'correctness', 'llm-judge-correctness'],
+  runs: 3,
+  judgeModel: 'gemini-3.1-pro-preview',
+  timeout: 30_000,   // 30s — fail fast on slow APIs
+  sparklines: false,  // plain percentages, no Unicode bars
+})
+```
+
+---
+
 ## Cost & pricing
 
 Cost estimation is intentionally transparent and conservative:
@@ -391,42 +418,7 @@ export default defineArena({
 npx duelist run
 ```
 
-Output:
-
-```
-  ⬡ Agent Duelist Results (3 runs each)
-  ──────────────────────────────────────────────────────────────────────
-
-  Task: extract-company
-  Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
-  ─────────────────────────────────────────────────────────────────────────────────────────────
-  azure/gpt-5-mini              1905ms      ~$0.189m        140      100%      100%      100%
-  azure/gpt-5-nano              2079ms      ~$0.081m        249      100%      100%      100%
-  azure/gpt-5.2-chat            1493ms      ~$0.0011        126      100%      100%      100%
-
-  Task: summarize
-  Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
-  ─────────────────────────────────────────────────────────────────────────────────────────────
-  azure/gpt-5-mini              1723ms      ~$0.192m        127        0%         —       36%
-  azure/gpt-5-nano              2117ms      ~$0.081m        234        0%         —       43%
-  azure/gpt-5.2-chat            1008ms      ~$0.584m         72        0%         —       43%
-
-  Task: classify-sentiment
-  Provider                     Latency          Cost     Tokens     Match    Schema     Fuzzy
-  ─────────────────────────────────────────────────────────────────────────────────────────────
-  azure/gpt-5-mini              1012ms      ~$0.077m         82      100%         —      100%
-  azure/gpt-5-nano              1075ms      ~$0.024m        104      100%         —      100%
-  azure/gpt-5.2-chat             936ms      ~$0.526m         81      100%         —      100%
-
-  ──────────────────────────────────────────────────────────────────────
-  Summary
-
-  ◆ Most correct: azure/gpt-5-mini (OpenAI via Azure) (avg 67%)
-  ◆ Fastest: azure/gpt-5.2-chat (OpenAI via Azure) (avg 1146ms)
-  ◆ Cheapest: azure/gpt-5-nano (OpenAI via Azure) (avg ~$0.062m)
-
-  Costs estimated from OpenRouter pricing catalog.
-```
+Output includes box-drawing tables with medals, color-ranked metrics, sparkline bars, and a winner row per task — see the [screenshot above](#what-you-get) for a real example.
 
 ---
 
@@ -525,7 +517,8 @@ Shipped so far:
 - OpenAI, Azure OpenAI, Anthropic, Google Gemini, and OpenAI-compatible providers
 - 7 built-in scorers including LLM-as-judge, tool-usage, schema validation, and fuzzy similarity
 - Tool-calling support with local handlers for agent task benchmarking
-- Colored console reporter with per-task tables and cross-provider summary
+- Console reporter with box-drawing tables, medal rankings, sparkline bars (toggleable), and per-task winner rows
+- Configurable per-request timeout to prevent hanging on unresponsive APIs
 - JSON reporter for CI/pipeline integration
 - Markdown reporter for PR comments
 - `duelist ci` command with regression detection, cost budgets, and flakiness warnings

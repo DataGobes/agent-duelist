@@ -4,9 +4,13 @@ import { registerPricing } from '../pricing/lookup.js'
 import type { ToolDefinition } from '../tasks/types.js'
 import type { ArenaProvider, TaskInput, TaskResult, ToolCall } from './types.js'
 
+/** Default per-request timeout in ms (60 s). Prevents hanging on unresponsive APIs. */
+export const REQUEST_TIMEOUT_MS = 60_000
+
 export interface OpenAIProviderOptions {
   apiKey?: string
   baseURL?: string
+  timeoutMs?: number
 }
 
 export interface AzureOpenAIProviderOptions {
@@ -14,12 +18,14 @@ export interface AzureOpenAIProviderOptions {
   endpoint?: string
   apiVersion?: string
   deployment?: string
+  timeoutMs?: number
 }
 
 export function openai(model: string, options?: OpenAIProviderOptions): ArenaProvider {
   const client = new OpenAI({
     apiKey: options?.apiKey ?? process.env.OPENAI_API_KEY,
     baseURL: options?.baseURL,
+    timeout: options?.timeoutMs ?? REQUEST_TIMEOUT_MS,
   })
 
   return makeProvider(`openai/${model}`, 'OpenAI', model, client, model)
@@ -36,6 +42,7 @@ export interface OpenAICompatibleOptions {
   stripThinking?: boolean
   /** Mark this provider as free (e.g. local Ollama models) so it registers zero-cost pricing */
   free?: boolean
+  timeoutMs?: number
 }
 
 export function openaiCompatible(options: OpenAICompatibleOptions): ArenaProvider {
@@ -46,6 +53,7 @@ export function openaiCompatible(options: OpenAICompatibleOptions): ArenaProvide
   const client = new OpenAI({
     apiKey,
     baseURL: options.baseURL,
+    timeout: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
   })
 
   if (options.free) {
@@ -69,6 +77,7 @@ export function azureOpenai(model: string, options?: AzureOpenAIProviderOptions)
     endpoint: options?.endpoint ?? process.env.AZURE_OPENAI_ENDPOINT,
     apiVersion: options?.apiVersion ?? process.env.AZURE_OPENAI_API_VERSION ?? '2024-12-01-preview',
     deployment,
+    timeout: options?.timeoutMs ?? REQUEST_TIMEOUT_MS,
   })
 
   return makeProvider(`azure/${model}`, 'Azure OpenAI', model, client, deployment)
@@ -110,7 +119,7 @@ export function makeProvider(
         params.tool_choice = 'auto'
       }
 
-      const response = await client.chat.completions.create(params)
+      const response = await client.chat.completions.create(params, { signal: input.signal })
       let totalPromptTokens = response.usage?.prompt_tokens ?? 0
       let totalCompletionTokens = response.usage?.completion_tokens ?? 0
 
@@ -153,7 +162,7 @@ export function makeProvider(
         const followUp = await client.chat.completions.create({
           model: requestModel,
           messages: toolMessages,
-        })
+        }, { signal: input.signal })
 
         totalPromptTokens += followUp.usage?.prompt_tokens ?? 0
         totalCompletionTokens += followUp.usage?.completion_tokens ?? 0

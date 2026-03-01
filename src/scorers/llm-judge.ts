@@ -1,4 +1,5 @@
 import OpenAI, { AzureOpenAI } from 'openai'
+import { REQUEST_TIMEOUT_MS } from '../providers/openai.js'
 import type { ScorerFn } from './types.js'
 
 const JUDGE_PROMPT = `You are a strict scoring judge. Evaluate the actual output against the expected output on three criteria. Score each from 0.0 to 1.0 using the full range (not just 0, 0.5, 1).
@@ -22,7 +23,7 @@ interface JudgeClientResult {
   model: string
 }
 
-function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined {
+function resolveJudgeClient(configModel?: string, timeoutMs = REQUEST_TIMEOUT_MS): JudgeClientResult | undefined {
   const model = configModel ?? process.env.DUELIST_JUDGE_MODEL ?? 'gpt-5-mini'
 
   // If the judge model starts with "gemini", use Google's OpenAI-compatible endpoint
@@ -31,6 +32,7 @@ function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined
       client: new OpenAI({
         apiKey: process.env.GOOGLE_API_KEY,
         baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+        timeout: timeoutMs,
       }),
       model,
     }
@@ -44,6 +46,7 @@ function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined
         endpoint: process.env.AZURE_OPENAI_ENDPOINT,
         apiVersion: process.env.AZURE_OPENAI_API_VERSION ?? '2024-12-01-preview',
         deployment: model,
+        timeout: timeoutMs,
       }),
       model,
     }
@@ -53,7 +56,7 @@ function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return undefined
 
-  return { client: new OpenAI({ apiKey }), model }
+  return { client: new OpenAI({ apiKey, timeout: timeoutMs }), model }
 }
 
 /**
@@ -63,7 +66,7 @@ function resolveJudgeClient(configModel?: string): JudgeClientResult | undefined
  * Requires OPENAI_API_KEY, AZURE_OPENAI_API_KEY, or GOOGLE_API_KEY
  * depending on the model prefix.
  */
-export function createLlmJudgeScorer(judgeModel?: string): ScorerFn {
+export function createLlmJudgeScorer(judgeModel?: string, timeoutMs = REQUEST_TIMEOUT_MS): ScorerFn {
   let cached: JudgeClientResult | undefined | null = undefined
 
   return async ({ task, result }) => {
@@ -73,7 +76,7 @@ export function createLlmJudgeScorer(judgeModel?: string): ScorerFn {
 
     // Lazy-init and cache the client
     if (cached === undefined) {
-      cached = resolveJudgeClient(judgeModel) ?? null
+      cached = resolveJudgeClient(judgeModel, timeoutMs) ?? null
     }
 
     if (!cached) {

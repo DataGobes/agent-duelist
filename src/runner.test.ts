@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { runBenchmarks } from './runner.js'
 import type { ArenaProvider } from './providers/types.js'
 import type { ArenaTask } from './tasks/types.js'
@@ -106,5 +106,38 @@ describe('runBenchmarks', () => {
     })
 
     expect(results[0]!.error).toBe('string error')
+  })
+
+  it('marks hung provider calls as timed out at configured duration', async () => {
+    vi.useFakeTimers()
+    let signalAborted = false
+    const provider: ArenaProvider = {
+      id: 'hang',
+      name: 'Hang',
+      model: 'hang-1',
+      async run(input) {
+        return new Promise((_resolve, reject) => {
+          input.signal?.addEventListener('abort', () => {
+            signalAborted = input.signal?.aborted ?? false
+            reject(new Error('aborted'))
+          })
+        })
+      },
+    }
+
+    const runPromise = runBenchmarks({
+      providers: [provider],
+      tasks: [{ name: 't', prompt: 'test' }],
+      scorers: [latencyScorer],
+      runs: 1,
+      timeout: 500,
+    })
+
+    await vi.advanceTimersByTimeAsync(500)
+    const results = await runPromise
+    vi.useRealTimers()
+
+    expect(results[0]!.error).toBe('Request timed out after 500ms')
+    expect(signalAborted).toBe(true)
   })
 })
