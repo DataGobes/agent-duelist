@@ -285,6 +285,10 @@ function formatScoreForLog(s: ScoreResult): string {
   if (s.name === 'cost' && details?.estimatedUsd != null) {
     return formatCost(details.estimatedUsd as number)
   }
+  // Surface failure reasons for scorers that return -1 (e.g. llm-judge)
+  if (s.value < 0 && details?.reason) {
+    return `SKIP (${details.reason})`
+  }
   return String(s.value)
 }
 
