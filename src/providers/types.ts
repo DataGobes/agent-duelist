@@ -12,6 +12,8 @@ export interface TaskInput {
   schema?: ZodSchema
   tools?: ToolDefinition[]
   signal?: AbortSignal
+  /** Per-request timeout in ms, forwarded to SDK HTTP clients. */
+  timeout?: number
 }
 
 export interface TaskResult {

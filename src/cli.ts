@@ -265,6 +265,7 @@ async function loadArenaWithPacks(packNames: string, configOpt: string): Promise
     packs,
     providers: userArena.config.providers,
     runs: userArena.config.runs,
+    timeout: userArena.config.timeout,
   })
 
   return defineArena(packConfig)

@@ -120,7 +120,9 @@ export function makeProvider(
         params.tool_choice = 'auto'
       }
 
-      const response = await client.chat.completions.create(params, { signal: input.signal })
+      const reqOpts: { signal?: AbortSignal; timeout?: number } = { signal: input.signal }
+      if (input.timeout) reqOpts.timeout = input.timeout
+      const response = await client.chat.completions.create(params, reqOpts)
       let totalPromptTokens = response.usage?.prompt_tokens ?? 0
       let totalCompletionTokens = response.usage?.completion_tokens ?? 0
 
@@ -163,7 +165,7 @@ export function makeProvider(
         const followUp = await client.chat.completions.create({
           model: requestModel,
           messages: toolMessages,
-        }, { signal: input.signal })
+        }, reqOpts)
 
         totalPromptTokens += followUp.usage?.prompt_tokens ?? 0
         totalCompletionTokens += followUp.usage?.completion_tokens ?? 0

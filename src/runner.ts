@@ -62,6 +62,7 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
                 schema: task.schema,
                 tools: task.tools,
                 signal,
+                timeout,
               }), timeout)
 
             const scores = await Promise.all(

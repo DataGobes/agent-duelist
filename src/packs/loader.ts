@@ -10,6 +10,8 @@ export interface PackRunConfig {
   providers: ArenaProvider[]
   /** Override runs count. Default: 1 */
   runs?: number
+  /** Per-request timeout in ms. Forwarded from arena config. */
+  timeout?: number
 }
 
 /**
@@ -34,5 +36,6 @@ export function buildPackConfig(config: PackRunConfig): ArenaConfig {
     tasks,
     scorers: [...scorerSet],
     runs: config.runs ?? 1,
+    timeout: config.timeout,
   }
 }

@@ -24,12 +24,14 @@ export function anthropic(model: string, options?: AnthropicProviderOptions): Ar
 
       const systemMessage = input.schema ? buildSchemaSystemMessage(input.schema) : undefined
 
+      const reqOpts: { signal?: AbortSignal; timeout?: number } = { signal: input.signal }
+      if (input.timeout) reqOpts.timeout = input.timeout
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
         system: systemMessage,
         messages: [{ role: 'user', content: input.prompt }],
-      }, { signal: input.signal })
+      }, reqOpts)
 
       const latencyMs = Date.now() - start
 
