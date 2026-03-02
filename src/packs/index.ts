@@ -1,5 +1,7 @@
 import type { TaskPack } from './types.js'
 import { structuredOutputPack } from './structured-output.js'
+import { toolCallingPack } from './tool-calling.js'
+import { reasoningPack } from './reasoning.js'
 
 const registry = new Map<string, TaskPack>()
 
@@ -8,6 +10,8 @@ function register(pack: TaskPack): void {
 }
 
 register(structuredOutputPack)
+register(toolCallingPack)
+register(reasoningPack)
 
 /** Get a pack by name. Throws if not found. */
 export function loadPack(name: string): TaskPack {

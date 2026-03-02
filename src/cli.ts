@@ -243,11 +243,14 @@ function printPackList(): void {
     console.log('No packs available.')
     return
   }
+  const nameWidth = Math.max(...packs.map(p => p.name.length)) + 2
   console.log('Available task packs:\n')
   for (const p of packs) {
-    console.log(`  ${p.name.padEnd(24)} ${p.description} (${p.taskCount} tasks)`)
+    const tasks = `${p.taskCount} tasks`
+    console.log(`  ${p.name.padEnd(nameWidth)} ${tasks.padEnd(9)} ${p.description}`)
   }
-  console.log('\nUsage: npx duelist run --pack <name>')
+  console.log(`\nRun:     npx duelist run --pack <name>`)
+  console.log(`Combine: npx duelist run --pack structured-output,tool-calling`)
 }
 
 async function loadArenaWithPacks(packNames: string, configOpt: string): Promise<Arena> {

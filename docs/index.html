@@ -760,8 +760,65 @@
       </div>
     </section>
 
-    <!-- ====== SLIDE 6: CI / GitHub Actions ====== -->
+    <!-- ====== SLIDE 6: Task Packs ====== -->
     <section class="slide slide-2col" data-slide="5">
+      <div class="panel">
+        <h2>Built-in task packs</h2>
+        <p>
+          Curated benchmark suites — run with <code>--pack</code>, zero task writing needed.
+          Each pack ships with recommended scorers tuned for its domain.
+        </p>
+        <div class="scorer-grid" style="margin-top: 14px;">
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#128196;</div>
+            <h3>structured-output</h3>
+            <p>6 tasks — Zod schema stress test: flat objects, nesting, arrays, enums, empty arrays, adversarial input.</p>
+          </div>
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#128295;</div>
+            <h3>tool-calling</h3>
+            <p>4 tasks — Function invocation accuracy: single calls, complex params, tool selection, parallel calls.</p>
+          </div>
+          <div class="scorer-card">
+            <div class="scorer-card-icon">&#129504;</div>
+            <h3>reasoning</h3>
+            <p>5 tasks — Logic, math, multi-step thinking: arithmetic, deduction, data interpretation, critical path.</p>
+          </div>
+        </div>
+      </div>
+      <div class="panel panel-accent">
+        <h2>Zero-config benchmarks</h2>
+        <div class="terminal" style="margin-top: 14px;">
+          <div class="terminal-chrome">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+            <span class="terminal-title">terminal</span>
+          </div>
+          <div class="terminal-body">
+<div class="t-line t-dim"># List available packs</div>
+<div class="t-line">$ npx duelist run <span class="t-accent">--pack list</span></div>
+<div class="t-line">&nbsp;</div>
+<div class="t-line t-muted">  structured-output  6 tasks   Zod schema stress test</div>
+<div class="t-line t-muted">  tool-calling       4 tasks   Function invocation accuracy</div>
+<div class="t-line t-muted">  reasoning          5 tasks   Logic, math, multi-step thinking</div>
+<div class="t-line">&nbsp;</div>
+<div class="t-line t-dim"># Run a single pack</div>
+<div class="t-line">$ npx duelist run <span class="t-accent">--pack tool-calling</span></div>
+<div class="t-line">&nbsp;</div>
+<div class="t-line t-dim"># Combine packs</div>
+<div class="t-line">$ npx duelist run <span class="t-accent">--pack structured-output,reasoning</span></div>
+          </div>
+        </div>
+        <p style="margin-top: 14px;">
+          Your config only needs providers — packs supply tasks and scorers.
+          <strong>15 benchmark tasks</strong> ready to go.
+        </p>
+      </div>
+    </section>
+
+    <!-- ====== SLIDE 7: CI / GitHub Actions ====== -->
+    <section class="slide slide-2col" data-slide="6">
       <div class="panel">
         <h2>Quality gates for your prompts</h2>
         <p>
@@ -847,8 +904,8 @@
       </div>
     </section>
 
-    <!-- ====== SLIDE 7: Providers ====== -->
-    <section class="slide slide-2col" data-slide="6">
+    <!-- ====== SLIDE 8: Providers ====== -->
+    <section class="slide slide-2col" data-slide="7">
       <div class="panel">
         <h2>Works with every provider</h2>
         <p>Built-in factories for the big names. Any OpenAI-compatible endpoint just works.</p>
@@ -919,8 +976,8 @@
       </div>
     </section>
 
-    <!-- ====== SLIDE 8: CTA ====== -->
-    <section class="slide slide-2col" data-slide="7">
+    <!-- ====== SLIDE 9: CTA ====== -->
+    <section class="slide slide-2col" data-slide="8">
       <div class="panel">
         <h2>Run your first duel tonight.</h2>
         <p style="font-size: 15px; color: var(--text); margin-bottom: 16px;">

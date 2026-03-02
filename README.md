@@ -161,9 +161,11 @@ export default defineArena({
 
 ### Available packs
 
-| Pack | Tasks | Description |
-|------|-------|-------------|
-| `structured-output` | 6 | Zod schema stress test — flat objects, nesting, arrays, enums, empty arrays, and adversarial input |
+| Pack | Tasks | Scorers | Description |
+|------|-------|---------|-------------|
+| `structured-output` | 6 | correctness, schema-correctness, latency, cost | Zod schema stress test — flat objects, nesting, arrays, enums, empty arrays, and adversarial input |
+| `tool-calling` | 4 | tool-usage, latency, cost | Function invocation accuracy — single calls, complex params, tool selection, and parallel calls |
+| `reasoning` | 5 | correctness, latency, cost | Logic, math, and multi-step thinking — arithmetic, deduction, data interpretation, critical path, and business rules |
 
 Packs work with both `run` and `ci` commands:
 
@@ -291,7 +293,7 @@ Scorers turn raw model outputs into **numeric scores** (0–1) with optional det
 | `correctness` | Exact match against `expected` (deep-equal, key-order independent for objects) |
 | `schema-correctness` | Validates output against the task's Zod `schema` via `safeParse()` |
 | `fuzzy-similarity` | Jaccard token-overlap similarity between output and `expected` |
-| `tool-usage` | Whether the model invoked the expected tool(s) during a tool-calling task |
+| `tool-usage` | Tool calling accuracy — checks tool selection and argument correctness (1.0 exact match, 0.5 right tool / wrong args, 0.0 wrong tool) |
 | `llm-judge-correctness` | LLM-as-judge — calls a judge model to score accuracy, completeness, and conciseness |
 
 Configure them in your arena:
@@ -637,7 +639,7 @@ With cost summary, flakiness warnings, and pass/fail verdict.
 - 5 provider types: OpenAI, Azure OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible gateway
 - 7 built-in scorers including LLM-as-judge, tool-usage, schema validation, and fuzzy similarity
 - Tool-calling support with local handlers for agent task benchmarking
-- **Task packs**: built-in benchmark suites (`structured-output`) — run with `--pack`, no config writing needed
+- **Task packs**: built-in benchmark suites (`structured-output`, `tool-calling`, `reasoning`) — run with `--pack`, no config writing needed
 - Quality-first medal ranking: output quality decides medals, efficiency only breaks ties
 - Fair head-to-head benchmarking with parallel provider execution
 - 4 reporters: console (tables + medals + sparklines), JSON, HTML (sortable, self-contained), and Markdown (PR comments)
@@ -649,7 +651,7 @@ With cost summary, flakiness warnings, and pass/fail verdict.
 
 **Planned** (subject to community feedback):
 
-- **More task packs** — reasoning, summarization, tool-calling, and multi-turn conversation packs
+- **More task packs** — summarization, multi-turn conversation, and code generation packs
 - **Agent workflows** — multi-step tool chains, multi-hop reasoning, and agent traces
 - **More export formats** — CSV
 - **Plugin system** — first-class support for user-defined providers and scorers
