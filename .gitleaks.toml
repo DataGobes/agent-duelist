@@ -1,0 +1,25 @@
+# Gitleaks configuration for agent-duelist
+# Prevents accidental commits of secrets (API keys, tokens, passwords).
+# Run locally: gitleaks detect --source . --config .gitleaks.toml
+
+title = "agent-duelist secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for known safe test values and documentation placeholders"
+
+# Fake tokens used in unit tests (too short / clearly dummy values)
+regexes = [
+  '''ghp_test''',
+]
+
+# Files that intentionally contain placeholder/example secret patterns
+paths = [
+  '''.env\.example$''',
+  '''README\.md$''',
+  '''CLAUDE\.md$''',
+  '''templates/''',
+  '''docs/''',
+]
