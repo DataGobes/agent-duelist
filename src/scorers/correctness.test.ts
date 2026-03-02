@@ -3,9 +3,9 @@ import { correctnessScorer } from './correctness.js'
 import type { ArenaTask } from '../tasks/types.js'
 import type { TaskResult } from '../providers/types.js'
 
-function ctx(expected: unknown, output: string | Record<string, unknown>) {
+function ctx(expected: unknown, output: string | Record<string, unknown> | unknown[]) {
   const task: ArenaTask = { name: 'test', prompt: 'hello', expected }
-  const result: TaskResult = { output, latencyMs: 100 }
+  const result: TaskResult = { output: output as string | Record<string, unknown>, latencyMs: 100 }
   return { task, result }
 }
 
@@ -57,5 +57,52 @@ describe('correctnessScorer', () => {
     const result: TaskResult = { output: 'anything', latencyMs: 100 }
     const score = correctnessScorer({ task, result })
     expect(score.value).toBe(0.5)
+  })
+
+  it('tolerates extra keys in actual output', () => {
+    const score = correctnessScorer(
+      ctx({ company: 'Acme' }, { company: 'Acme', extra: 'field', another: 42 })
+    )
+    expect(score.value).toBe(1)
+  })
+
+  it('unwraps single-key object when expected is an array', () => {
+    const score = correctnessScorer(
+      ctx([1, 2, 3], { items: [1, 2, 3] })
+    )
+    expect(score.value).toBe(1)
+  })
+
+  it('unwraps nested array-of-objects from wrapper', () => {
+    const expected = [
+      { name: 'Widget', price: 49.99 },
+      { name: 'Chair', price: 199.00 },
+    ]
+    const score = correctnessScorer(
+      ctx(expected, { products: [{ name: 'Widget', price: 49.99 }, { name: 'Chair', price: 199.00 }] })
+    )
+    expect(score.value).toBe(1)
+  })
+
+  it('unwraps multi-key object with only one array-valued key', () => {
+    const score = correctnessScorer(
+      ctx([1, 2], { items: [1, 2], count: 2 })
+    )
+    expect(score.value).toBe(1)
+  })
+
+  it('unwraps schema-echo wrapper (type + items + $schema)', () => {
+    const expected = [{ name: 'A' }, { name: 'B' }]
+    const score = correctnessScorer(
+      ctx(expected, { type: 'array', items: [{ name: 'A' }, { name: 'B' }], $schema: 'https://json-schema.org/...' })
+    )
+    expect(score.value).toBe(1)
+  })
+
+  it('does not unwrap when multiple array-valued keys exist', () => {
+    const score = correctnessScorer(
+      ctx([1, 2], { items: [1, 2], others: [3, 4] })
+    )
+    expect(score.value).toBe(0)
   })
 })

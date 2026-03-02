@@ -218,6 +218,28 @@ export function computeColumnStats(
   return stats
 }
 
+/** Scorers that measure output quality (vs efficiency metrics like latency/cost). */
+const QUALITY_SCORERS = new Set([
+  'correctness', 'schema-correctness', 'fuzzy-similarity', 'llm-judge-correctness', 'tool-usage',
+])
+
+/**
+ * Check whether a provider passes the quality gate: it must score > 0
+ * on at least one quality scorer. If no quality scorers are present,
+ * all providers pass.
+ */
+export function passesQualityGate(
+  providerId: string,
+  columnStats: Map<string, ColumnStats>
+): boolean {
+  const qualityColumns = [...columnStats.keys()].filter(k => QUALITY_SCORERS.has(k))
+  if (qualityColumns.length === 0) return true
+  return qualityColumns.some(col => {
+    const val = columnStats.get(col)?.values.get(providerId)
+    return val !== undefined && val > 0
+  })
+}
+
 export function computeMedals(
   columnStats: Map<string, ColumnStats>,
   providerIds: string[]
@@ -229,36 +251,67 @@ export function computeMedals(
     return medals
   }
 
-  const wins = new Map<string, number>()
-  for (const id of providerIds) wins.set(id, 0)
+  // Quality gate: providers that score 0 on ALL quality scorers are ineligible
+  const eligible = new Set(providerIds.filter(id => passesQualityGate(id, columnStats)))
 
-  for (const [, colStats] of columnStats) {
+  // Count quality wins and efficiency wins separately
+  const qualityWins = new Map<string, number>()
+  const efficiencyWins = new Map<string, number>()
+  for (const id of providerIds) {
+    qualityWins.set(id, 0)
+    efficiencyWins.set(id, 0)
+  }
+
+  for (const [colName, colStats] of columnStats) {
     if (colStats.best === undefined) continue
     const bestProviders = [...colStats.values.entries()]
       .filter(([, v]) => v !== undefined && v === colStats.best)
     if (bestProviders.length === 1) {
-      wins.set(bestProviders[0]![0], (wins.get(bestProviders[0]![0]) ?? 0) + 1)
+      const winnerId = bestProviders[0]![0]
+      if (QUALITY_SCORERS.has(colName)) {
+        qualityWins.set(winnerId, (qualityWins.get(winnerId) ?? 0) + 1)
+      } else {
+        efficiencyWins.set(winnerId, (efficiencyWins.get(winnerId) ?? 0) + 1)
+      }
     }
   }
 
-  const totalWins = [...wins.values()].reduce((a, b) => a + b, 0)
+  const totalWins = [...qualityWins.values()].reduce((a, b) => a + b, 0)
+    + [...efficiencyWins.values()].reduce((a, b) => a + b, 0)
   if (totalWins === 0) {
     for (const id of providerIds) medals.set(id, 'none')
     return medals
   }
 
-  const sorted = [...wins.entries()].sort((a, b) =>
-    b[1] - a[1] || a[0].localeCompare(b[0])
-  )
+  // Rank only eligible providers; ineligible ones always get 'none'
+  const eligibleSorted = providerIds
+    .filter(id => eligible.has(id))
+    .sort((a, b) => {
+      const qDiff = (qualityWins.get(b) ?? 0) - (qualityWins.get(a) ?? 0)
+      if (qDiff !== 0) return qDiff
+      const eDiff = (efficiencyWins.get(b) ?? 0) - (efficiencyWins.get(a) ?? 0)
+      if (eDiff !== 0) return eDiff
+      return a.localeCompare(b)
+    })
 
   const medalList: Medal[] = ['gold', 'silver', 'bronze']
   let rank = 0
-  for (let i = 0; i < sorted.length; i++) {
-    if (i > 0 && sorted[i]![1] < sorted[i - 1]![1]) {
-      rank = i
+  for (let i = 0; i < eligibleSorted.length; i++) {
+    if (i > 0) {
+      const prevQ = qualityWins.get(eligibleSorted[i - 1]!) ?? 0
+      const currQ = qualityWins.get(eligibleSorted[i]!) ?? 0
+      if (currQ < prevQ) {
+        rank = i
+      } else if (currQ === prevQ) {
+        const prevE = efficiencyWins.get(eligibleSorted[i - 1]!) ?? 0
+        const currE = efficiencyWins.get(eligibleSorted[i]!) ?? 0
+        if (currE < prevE) rank = i
+      }
     }
-    const hasWins = sorted[i]![1] > 0
-    medals.set(sorted[i]![0], hasWins && rank < medalList.length ? medalList[rank]! : 'none')
+    medals.set(eligibleSorted[i]!, rank < medalList.length ? medalList[rank]! : 'none')
+  }
+  for (const id of providerIds) {
+    if (!eligible.has(id)) medals.set(id, 'none')
   }
 
   return medals

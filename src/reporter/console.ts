@@ -420,27 +420,11 @@ function printSummary(results: BenchmarkResult[], providers: string[], byProvide
     }
   }
 
-  // Overall winner (2+ providers) — most category wins
-  if (!single) {
-    const wins = new Map<string, number>()
-    for (const id of providers) wins.set(id, 0)
-
-    if (byCorrectness) wins.set(byCorrectness.id, (wins.get(byCorrectness.id) ?? 0) + 1)
-    if (byLatency && byLatency.avg !== Infinity) wins.set(byLatency.id, (wins.get(byLatency.id) ?? 0) + 1)
-    if (byCost?.avg !== undefined) wins.set(byCost.id, (wins.get(byCost.id) ?? 0) + 1)
-
-    const maxWins = Math.max(...wins.values())
-    if (maxWins > 0) {
-      const topProviders = [...wins.entries()].filter(([, w]) => w === maxWins)
-      console.log('')
-      if (topProviders.length === 1) {
-        const [winnerId, winCount] = topProviders[0]!
-        console.log(`  🏆 Overall:      ${brightGreen}${boldCode}${winnerId}${reset} ${dim(providerLabel(winnerId))}  ${dim(`(${winCount}/3 categories)`)}`)
-      } else {
-        const names = topProviders.map(([id]) => bold(id)).join(dim(', '))
-        console.log(`  🏆 Overall:      ${names}  ${dim(`(tied at ${maxWins}/3)`)}`)
-      }
-    }
+  // Overall winner (2+ providers) — quality-first
+  if (!single && byCorrectness && byCorrectness.avg > 0) {
+    console.log('')
+    const pct = `${Math.round(byCorrectness.avg * 100)}%`
+    console.log(`  🏆 Overall:      ${brightGreen}${boldCode}${byCorrectness.id}${reset} ${dim(providerLabel(byCorrectness.id))}  ${dim(`(${pct} avg correctness)`)}`)
   }
 
   console.log('')

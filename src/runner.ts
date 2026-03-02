@@ -9,7 +9,7 @@ export interface BenchmarkResult {
   scores: ScoreResult[]
   error?: string
   raw: {
-    output: string | Record<string, unknown>
+    output: string | Record<string, unknown> | unknown[]
     latencyMs: number
     usage?: { promptTokens?: number; completionTokens?: number }
     toolCalls?: ToolCall[]
@@ -62,6 +62,7 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResul
                 schema: task.schema,
                 tools: task.tools,
                 signal,
+                timeout,
               }), timeout)
 
             const scores = await Promise.all(

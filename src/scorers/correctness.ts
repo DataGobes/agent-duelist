@@ -1,18 +1,20 @@
 import type { ScorerFn } from './types.js'
 
 /**
- * Simple exact-match correctness for v0.1.
+ * Correctness scorer for LLM output evaluation.
  *
  * For strings: case-insensitive trimmed comparison.
- * For objects: key-order-independent deep equality.
- * Returns 1 (match) or 0 (no match / no expected value).
+ * For objects: checks all expected keys exist with matching values (extra keys in actual are tolerated).
+ * For arrays: if actual is an object wrapping a single array, unwraps it before comparing.
+ * Returns 1 (match), 0 (no match), or 0.5 (no expected value defined).
  */
 export const correctnessScorer: ScorerFn = ({ task, result }) => {
   if (task.expected === undefined) {
     return { name: 'correctness', value: 0.5, details: { reason: 'no expected value' } }
   }
 
-  const match = deepEqual(task.expected, result.output)
+  const actual = normalizeOutput(task.expected, result.output)
+  const match = deepEqual(task.expected, actual)
 
   return {
     name: 'correctness',
@@ -21,29 +23,50 @@ export const correctnessScorer: ScorerFn = ({ task, result }) => {
   }
 }
 
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true
+/**
+ * Normalize model output to align with the expected shape.
+ * Handles two common cases where json_object mode forces array responses
+ * into wrapper objects:
+ * - Single-key wrapper: { "products": [...] }
+ * - Schema-echo wrapper: { "type": "array", "items": [...], "$schema": "..." }
+ *
+ * Strategy: if expected is an array and actual is an object, find all keys
+ * whose value is an array. If exactly one exists, unwrap it.
+ */
+function normalizeOutput(expected: unknown, actual: unknown): unknown {
+  if (Array.isArray(expected) && !Array.isArray(actual) && typeof actual === 'object' && actual !== null) {
+    const entries = Object.entries(actual as Record<string, unknown>)
+    const arrayEntries = entries.filter(([, v]) => Array.isArray(v))
+    if (arrayEntries.length === 1) {
+      return arrayEntries[0]![1]
+    }
+  }
+  return actual
+}
 
-  if (typeof a === 'string' && typeof b === 'string') {
-    return a.trim().toLowerCase() === b.trim().toLowerCase()
+function deepEqual(expected: unknown, actual: unknown): boolean {
+  if (expected === actual) return true
+
+  if (typeof expected === 'string' && typeof actual === 'string') {
+    return expected.trim().toLowerCase() === actual.trim().toLowerCase()
   }
 
-  if (typeof a !== typeof b) return false
-  if (a === null || b === null) return a === b
+  if (typeof expected !== typeof actual) return false
+  if (expected === null || actual === null) return expected === actual
 
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false
-    return a.every((val, i) => deepEqual(val, b[i]))
+  if (Array.isArray(expected) && Array.isArray(actual)) {
+    if (expected.length !== actual.length) return false
+    return expected.every((val, i) => deepEqual(val, actual[i]))
   }
 
-  if (typeof a === 'object' && typeof b === 'object') {
-    const objA = a as Record<string, unknown>
-    const objB = b as Record<string, unknown>
-    const keysA = Object.keys(objA)
-    const keysB = Object.keys(objB)
-    if (keysA.length !== keysB.length) return false
-    return keysA.every((key) => key in objB && deepEqual(objA[key], objB[key]))
+  if (typeof expected === 'object' && typeof actual === 'object') {
+    const objExpected = expected as Record<string, unknown>
+    const objActual = actual as Record<string, unknown>
+    const keysExpected = Object.keys(objExpected)
+    // Check that all expected keys exist in actual with matching values.
+    // Extra keys in actual are tolerated — LLMs often add unrequested fields.
+    return keysExpected.every((key) => key in objActual && deepEqual(objExpected[key], objActual[key]))
   }
 
-  return a === b
+  return expected === actual
 }

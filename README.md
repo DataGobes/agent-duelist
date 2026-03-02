@@ -34,6 +34,8 @@ npx duelist run    # see who wins
 |---|---|
 | **Provider-agnostic** | One config, many providers. Swap models and gateways without rewriting tasks. |
 | **Agent-focused** | Built for agent workflows and tool use, not just single-turn prompts. |
+| **Task packs** | Built-in benchmark suites — run with `--pack structured-output`, zero config needed. |
+| **Quality-first ranking** | Medals decided by output quality. Speed and cost only break ties — a fast model that gets nothing right won't medal. |
 | **7 built-in scorers** | Correctness, latency, cost, schema validation, fuzzy similarity, LLM-as-judge, and tool usage. |
 | **Fair benchmarking** | Tasks run sequentially while providers race in parallel — fair latency comparison with no queue-induced penalties. |
 | **TypeScript-native** | Strongly typed APIs, Zod schemas for structured outputs, and a simple `defineArena()` entrypoint. |
@@ -125,6 +127,55 @@ npx duelist run --reporter json > results.json
 
 # Self-contained HTML report you can share or host
 npx duelist run --reporter html --output report.html
+```
+
+---
+
+## Task packs
+
+Task packs are **built-in benchmark suites** — curated sets of tasks with recommended scorers. Use them to benchmark providers without writing any tasks yourself.
+
+```bash
+# List available packs
+npx duelist run --pack list
+
+# Run a pack with your providers
+npx duelist run --pack structured-output --config arena.config.ts
+```
+
+Your config only needs to define providers — the pack supplies tasks and scorers:
+
+```ts
+// arena.config.ts
+import { defineArena, openai, anthropic } from 'agent-duelist'
+
+export default defineArena({
+  providers: [
+    openai('gpt-5-mini'),
+    anthropic('claude-sonnet-4.6'),
+  ],
+  tasks: [],     // ignored when --pack is used
+  scorers: [],   // pack supplies its own scorers
+})
+```
+
+### Available packs
+
+| Pack | Tasks | Description |
+|------|-------|-------------|
+| `structured-output` | 6 | Zod schema stress test — flat objects, nesting, arrays, enums, empty arrays, and adversarial input |
+
+Packs work with both `run` and `ci` commands:
+
+```bash
+# CI with a task pack
+npx duelist ci --pack structured-output --threshold correctness=0.1 --budget 1.00
+```
+
+You can also combine multiple packs:
+
+```bash
+npx duelist run --pack structured-output,another-pack
 ```
 
 ---
@@ -371,6 +422,12 @@ npx duelist run
 # Custom config
 npx duelist run --config path/to/arena.config.ts
 
+# Run a built-in task pack
+npx duelist run --pack structured-output
+
+# List available packs
+npx duelist run --pack list
+
 # JSON for piping
 npx duelist run --reporter json > results.json
 
@@ -384,6 +441,7 @@ npx duelist run --quiet
 | Option | Description |
 |--------|-------------|
 | `-c, --config <path>` | Path to config file (default: `arena.config.ts`) |
+| `--pack <names>` | Run built-in task pack(s) instead of config tasks. Comma-separated for multiple packs. Use `list` to show available packs. |
 | `--reporter <type>` | Output format: `console` (default), `json`, or `html` |
 | `--output <path>` | Output file path for HTML reporter (default: `duelist-report.html`) |
 | `-q, --quiet` | Suppress per-result progress |
@@ -399,6 +457,9 @@ npx duelist ci --update-baseline
 # Subsequent runs — compare against baseline
 npx duelist ci --threshold correctness=0.1 --budget 1.00
 
+# Run CI with a task pack
+npx duelist ci --pack structured-output --threshold correctness=0.1
+
 # Post comparison table as a PR comment (GitHub Actions)
 npx duelist ci --threshold correctness=0.1 --comment
 ```
@@ -406,6 +467,7 @@ npx duelist ci --threshold correctness=0.1 --comment
 | Option | Description |
 |--------|-------------|
 | `-c, --config <path>` | Path to config file (default: `arena.config.ts`) |
+| `--pack <names>` | Run built-in task pack(s) instead of config tasks |
 | `--baseline <path>` | Baseline JSON file (default: `.duelist/baseline.json`) |
 | `--budget <dollars>` | Max total cost in USD — fails if exceeded |
 | `--threshold <scorer=delta>` | Regression threshold (repeatable, e.g. `--threshold correctness=0.1 --threshold cost=0.002`) |
@@ -511,7 +573,9 @@ npx duelist run
 
 - Providers are compared **head-to-head within each task** — all providers receive the same prompt at the same time.
 - Medals are awarded only when a provider is the **sole leader** in a metric column. Ties don't award medals, keeping rankings meaningful.
-- The overall winner is determined by category wins across correctness, latency, and cost.
+- **Quality-first ranking**: medals are decided by quality scorer wins (correctness, schema-correctness, etc.). Efficiency metrics (latency, cost) only break ties among quality-equal providers.
+- **Quality gate**: providers that score 0% on all quality scorers are ineligible for medals entirely — being fast or cheap doesn't compensate for getting nothing right.
+- The overall winner is the provider with the highest average correctness score.
 
 ---
 
@@ -573,6 +637,8 @@ With cost summary, flakiness warnings, and pass/fail verdict.
 - 5 provider types: OpenAI, Azure OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible gateway
 - 7 built-in scorers including LLM-as-judge, tool-usage, schema validation, and fuzzy similarity
 - Tool-calling support with local handlers for agent task benchmarking
+- **Task packs**: built-in benchmark suites (`structured-output`) — run with `--pack`, no config writing needed
+- Quality-first medal ranking: output quality decides medals, efficiency only breaks ties
 - Fair head-to-head benchmarking with parallel provider execution
 - 4 reporters: console (tables + medals + sparklines), JSON, HTML (sortable, self-contained), and Markdown (PR comments)
 - `duelist ci` with regression detection (confidence intervals), cost budgets, and flakiness warnings
@@ -583,6 +649,7 @@ With cost summary, flakiness warnings, and pass/fail verdict.
 
 **Planned** (subject to community feedback):
 
+- **More task packs** — reasoning, summarization, tool-calling, and multi-turn conversation packs
 - **Agent workflows** — multi-step tool chains, multi-hop reasoning, and agent traces
 - **More export formats** — CSV
 - **Plugin system** — first-class support for user-defined providers and scorers

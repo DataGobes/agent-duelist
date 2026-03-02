@@ -6,6 +6,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url'
 import type { BenchmarkResult } from './runner.js'
 import type { ScoreResult } from './scorers/types.js'
 import type { Arena } from './arena.js'
+import { defineArena } from './arena.js'
 import type { CiOptions } from './ci.js'
 import { consoleReporter } from './reporter/console.js'
 import { jsonReporter } from './reporter/json.js'
@@ -14,6 +15,8 @@ import { htmlReporter } from './reporter/html.js'
 import { loadBaseline, saveBaseline, computeStats, compareResults } from './ci.js'
 import { detectGitHubContext, upsertPrComment } from './github.js'
 import { formatCost } from './utils/format.js'
+import { listPacks } from './packs/index.js'
+import { buildPackConfig } from './packs/loader.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -59,16 +62,24 @@ program
   .command('run')
   .description('Run benchmarks defined in your arena config')
   .option('-c, --config <path>', 'Path to config file', 'arena.config.ts')
+  .option('--pack <names>', 'Run built-in task pack(s), comma-separated. Use "list" to see available packs.')
   .option('--reporter <type>', 'Output format: console, json, or html', 'console')
   .option('--output <path>', 'Output file path (used with html reporter)', 'duelist-report.html')
   .option('-q, --quiet', 'Suppress per-result progress (show only final report)')
-  .action(async (opts: { config: string; reporter: string; output: string; quiet?: boolean }) => {
+  .action(async (opts: { config: string; pack?: string; reporter: string; output: string; quiet?: boolean }) => {
+    if (opts.pack === 'list') {
+      printPackList()
+      return
+    }
+
     if (!['console', 'json', 'html'].includes(opts.reporter)) {
       console.error(`Unknown reporter "${opts.reporter}". Use "console", "json", or "html".`)
       process.exit(1)
     }
 
-    const typedArena = await loadArenaConfig(opts.config)
+    const typedArena = opts.pack
+      ? await loadArenaWithPacks(opts.pack, opts.config)
+      : await loadArenaConfig(opts.config)
 
     try {
       // Live progress: show per-result lines unless --quiet or json
@@ -116,6 +127,7 @@ program
   .command('ci')
   .description('Run benchmarks, compare against baseline, and enforce quality gates')
   .option('-c, --config <path>', 'Path to config file', 'arena.config.ts')
+  .option('--pack <names>', 'Run built-in task pack(s), comma-separated. Use "list" to see available packs.')
   .option('--baseline <path>', 'Baseline JSON file', '.duelist/baseline.json')
   .option('--budget <dollars>', 'Max total cost in USD', parseFloat)
   .option('--threshold <scorer=delta>', 'Regression threshold (repeatable)', collectThreshold, new Map<string, number>())
@@ -124,6 +136,7 @@ program
   .option('-q, --quiet', 'Suppress per-result progress')
   .action(async (opts: {
     config: string
+    pack?: string
     baseline: string
     budget?: number
     threshold: Map<string, number>
@@ -131,6 +144,11 @@ program
     comment?: boolean
     quiet?: boolean
   }) => {
+    if (opts.pack === 'list') {
+      printPackList()
+      return
+    }
+
     const ciOpts: CiOptions = {
       configPath: opts.config,
       baselinePath: resolve(opts.baseline),
@@ -141,7 +159,9 @@ program
       quiet: opts.quiet ?? false,
     }
 
-    const typedArena = await loadArenaConfig(ciOpts.configPath)
+    const typedArena = opts.pack
+      ? await loadArenaWithPacks(opts.pack, ciOpts.configPath)
+      : await loadArenaConfig(ciOpts.configPath)
 
     // 1. Run benchmarks
     console.log('Running benchmarks...')
@@ -216,6 +236,40 @@ program
   })
 
 program.parse()
+
+function printPackList(): void {
+  const packs = listPacks()
+  if (packs.length === 0) {
+    console.log('No packs available.')
+    return
+  }
+  console.log('Available task packs:\n')
+  for (const p of packs) {
+    console.log(`  ${p.name.padEnd(24)} ${p.description} (${p.taskCount} tasks)`)
+  }
+  console.log('\nUsage: npx duelist run --pack <name>')
+}
+
+async function loadArenaWithPacks(packNames: string, configOpt: string): Promise<Arena> {
+  const configPath = resolve(configOpt)
+
+  if (!existsSync(configPath)) {
+    console.error('No arena.config.ts found. Create one with `npx duelist init` to configure')
+    console.error('your providers, then re-run with --pack.')
+    process.exit(1)
+  }
+
+  const userArena = await loadArenaConfig(configOpt)
+  const packs = packNames.split(',').map((s) => s.trim())
+  const packConfig = buildPackConfig({
+    packs,
+    providers: userArena.config.providers,
+    runs: userArena.config.runs,
+    timeout: userArena.config.timeout,
+  })
+
+  return defineArena(packConfig)
+}
 
 async function loadArenaConfig(configOpt: string): Promise<Arena> {
   const configPath = resolve(configOpt)

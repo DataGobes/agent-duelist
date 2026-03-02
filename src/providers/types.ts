@@ -12,10 +12,12 @@ export interface TaskInput {
   schema?: ZodSchema
   tools?: ToolDefinition[]
   signal?: AbortSignal
+  /** Per-request timeout in ms, forwarded to SDK HTTP clients. */
+  timeout?: number
 }
 
 export interface TaskResult {
-  output: string | Record<string, unknown>
+  output: string | Record<string, unknown> | unknown[]
   usage?: {
     promptTokens?: number
     completionTokens?: number

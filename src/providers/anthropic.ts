@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { ArenaProvider, TaskInput, TaskResult } from './types.js'
-import { SCHEMA_SYSTEM_MESSAGE, parseSchemaOutput } from './shared.js'
+import { buildSchemaSystemMessage, parseSchemaOutput } from './shared.js'
 
 export interface AnthropicProviderOptions {
   apiKey?: string
@@ -22,14 +22,16 @@ export function anthropic(model: string, options?: AnthropicProviderOptions): Ar
     async run(input: TaskInput): Promise<TaskResult> {
       const start = Date.now()
 
-      const systemMessage = input.schema ? SCHEMA_SYSTEM_MESSAGE : undefined
+      const systemMessage = input.schema ? buildSchemaSystemMessage(input.schema) : undefined
 
+      const reqOpts: { signal?: AbortSignal; timeout?: number } = { signal: input.signal }
+      if (input.timeout) reqOpts.timeout = input.timeout
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
         system: systemMessage,
         messages: [{ role: 'user', content: input.prompt }],
-      }, { signal: input.signal })
+      }, reqOpts)
 
       const latencyMs = Date.now() - start
 
