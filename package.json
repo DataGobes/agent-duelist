@@ -1,7 +1,7 @@
 {
   "name": "agent-duelist",
-  "version": "0.3.0",
-  "description": "Pit LLM providers against each other on agent tasks.",
+  "version": "0.3.1",
+  "description": "Pit LLM providers against each other on agent tasks. Built-in task packs for structured output, tool calling, and reasoning.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -63,7 +63,13 @@
     "openai",
     "anthropic",
     "arena",
-    "duelist"
+    "duelist",
+    "structured-output",
+    "tool-calling",
+    "function-calling",
+    "zod",
+    "json-schema",
+    "task-packs"
   ],
   "repository": {
     "type": "git",
