@@ -254,7 +254,7 @@ async function loadArenaConfig(configOpt: string): Promise<Arena> {
 
   const maybeConfig = (arena as { config?: unknown }).config
   if (maybeConfig === undefined || maybeConfig === null || typeof maybeConfig !== 'object') {
-    ;(arena as { config: Record<string, unknown> }).config = {}
+    ;(arena as unknown as { config: Record<string, unknown> }).config = {}
   }
   return arena as Arena
 }
