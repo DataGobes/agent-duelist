@@ -244,6 +244,10 @@ async function loadArenaConfig(configOpt: string): Promise<Arena> {
     process.exit(1)
   }
 
+  const maybeConfig = (arena as { config?: unknown }).config
+  if (maybeConfig === undefined || maybeConfig === null || typeof maybeConfig !== 'object') {
+    ;(arena as { config: Record<string, unknown> }).config = {}
+  }
   return arena as Arena
 }
 
