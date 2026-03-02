@@ -44,53 +44,61 @@ function withTimeout<T>(run: (signal: AbortSignal) => Promise<T>, ms: number): P
 export async function runBenchmarks(options: RunOptions): Promise<BenchmarkResult[]> {
   const { providers, tasks, scorers, runs, onResult } = options
   const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS
+
   const results: BenchmarkResult[] = []
 
+  // Tasks run sequentially so every provider faces the same conditions per task.
+  // Providers within each task run in parallel — fair head-to-head comparison
+  // without queue-induced timeout penalties from full parallelism.
   for (const task of tasks) {
-    for (const provider of providers) {
-      for (let run = 1; run <= runs; run++) {
-        let result: BenchmarkResult
+    for (let run = 1; run <= runs; run++) {
+      const runResults = await Promise.all(
+        providers.map(async (provider) => {
+          let result: BenchmarkResult
 
-        try {
-          const taskResult = await withTimeout((signal) => provider.run({
-              prompt: task.prompt,
-              schema: task.schema,
-              tools: task.tools,
-              signal,
-            }), timeout)
+          try {
+            const taskResult = await withTimeout((signal) => provider.run({
+                prompt: task.prompt,
+                schema: task.schema,
+                tools: task.tools,
+                signal,
+              }), timeout)
 
-          const scores = await Promise.all(
-            scorers.map((scorer) => scorer({ task, result: taskResult }, provider.id))
-          )
+            const scores = await Promise.all(
+              scorers.map((scorer) => scorer({ task, result: taskResult }, provider.id))
+            )
 
-          result = {
-            providerId: provider.id,
-            taskName: task.name,
-            run,
-            scores,
-            raw: {
-              output: taskResult.output,
-              latencyMs: taskResult.latencyMs,
-              usage: taskResult.usage,
-              toolCalls: taskResult.toolCalls,
-            },
+            result = {
+              providerId: provider.id,
+              taskName: task.name,
+              run,
+              scores,
+              raw: {
+                output: taskResult.output,
+                latencyMs: taskResult.latencyMs,
+                usage: taskResult.usage,
+                toolCalls: taskResult.toolCalls,
+              },
+            }
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err)
+
+            result = {
+              providerId: provider.id,
+              taskName: task.name,
+              run,
+              scores: [],
+              error: message,
+              raw: { output: '', latencyMs: 0 },
+            }
           }
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err)
 
-          result = {
-            providerId: provider.id,
-            taskName: task.name,
-            run,
-            scores: [],
-            error: message,
-            raw: { output: '', latencyMs: 0 },
-          }
-        }
+          onResult?.(result)
+          return result
+        })
+      )
 
-        results.push(result)
-        onResult?.(result)
-      }
+      results.push(...runResults)
     }
   }
 

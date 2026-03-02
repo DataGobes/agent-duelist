@@ -7,13 +7,15 @@ export const fuzzySimilarityScorer: ScorerFn = ({ task, result }) => {
 
   const a = stringify(task.expected)
   const b = stringify(result.output)
+  const setA = tokenize(a)
+  const setB = tokenize(b)
 
-  const similarity = jaccardSimilarity(tokenize(a), tokenize(b))
+  const similarity = jaccardSimilarity(setA, setB)
 
   return {
     name: 'fuzzy-similarity',
     value: Math.round(similarity * 100) / 100,
-    details: { method: 'jaccard', expectedTokens: tokenize(a).size, actualTokens: tokenize(b).size },
+    details: { method: 'jaccard', expectedTokens: setA.size, actualTokens: setB.size },
   }
 }
 
