@@ -20,10 +20,14 @@ describe('defineArena', () => {
     ).toThrow('At least one provider')
   })
 
-  it('throws if no tasks are given', () => {
-    expect(() =>
-      defineArena({ providers: [mockProvider('a')], tasks: [] })
-    ).toThrow('At least one task')
+  it('allows empty tasks at definition time (for --pack usage)', () => {
+    const arena = defineArena({ providers: [mockProvider('a')], tasks: [] })
+    expect(typeof arena.run).toBe('function')
+  })
+
+  it('throws at run() time if no tasks are present', async () => {
+    const arena = defineArena({ providers: [mockProvider('a')], tasks: [], scorers: ['latency'] })
+    await expect(arena.run()).rejects.toThrow('At least one task')
   })
 
   it('returns an arena with a run method', () => {

@@ -33,9 +33,6 @@ export function defineArena(config: ArenaConfig): Arena {
   if (config.providers.length === 0) {
     throw new Error('At least one provider is required')
   }
-  if (config.tasks.length === 0) {
-    throw new Error('At least one task is required')
-  }
 
   const scorerNames = config.scorers ?? ['latency', 'cost', 'correctness']
   const scorerFns = resolveScorers(scorerNames, config.judgeModel, config.timeout)
@@ -45,6 +42,9 @@ export function defineArena(config: ArenaConfig): Arena {
     config,
 
     async run(options?: RunOptions): Promise<BenchmarkResult[]> {
+      if (config.tasks.length === 0) {
+        throw new Error('At least one task is required')
+      }
       return runBenchmarks({
         providers: config.providers,
         tasks: config.tasks,

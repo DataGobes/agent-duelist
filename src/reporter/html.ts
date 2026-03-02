@@ -697,7 +697,7 @@ function renderErrors(errors: DedupedError[]): string {
   }).join('\n')
 
   return `<section class="errors-section">
-  <h2 class="errors-title" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'block'">Errors</h2>
+  <h2 class="errors-title" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">Errors</h2>
   <div class="errors-list">
     ${items}
   </div>

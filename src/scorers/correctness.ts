@@ -6,7 +6,7 @@ import type { ScorerFn } from './types.js'
  * For strings: case-insensitive trimmed comparison.
  * For objects: checks all expected keys exist with matching values (extra keys in actual are tolerated).
  * For arrays: if actual is an object wrapping a single array, unwraps it before comparing.
- * Returns 1 (match) or 0 (no match / no expected value).
+ * Returns 1 (match), 0 (no match), or 0.5 (no expected value defined).
  */
 export const correctnessScorer: ScorerFn = ({ task, result }) => {
   if (task.expected === undefined) {
