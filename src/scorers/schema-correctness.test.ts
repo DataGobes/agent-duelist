@@ -37,4 +37,22 @@ describe('schemaCorrectnessScorer', () => {
     const score = schemaCorrectnessScorer(ctx(undefined, 'anything'), 'x')
     expect(score.value).toBe(-1)
   })
+
+  it('unwraps array from wrapper object when schema expects array', () => {
+    const arraySchema = z.array(z.object({ name: z.string() }))
+    const score = schemaCorrectnessScorer(
+      ctx(arraySchema, { items: [{ name: 'A' }, { name: 'B' }] }),
+      'x'
+    )
+    expect(score.value).toBe(1)
+  })
+
+  it('unwraps schema-echo wrapper (type + items + $schema)', () => {
+    const arraySchema = z.array(z.object({ id: z.string() }))
+    const score = schemaCorrectnessScorer(
+      ctx(arraySchema, { type: 'array', items: [{ id: 'A' }], $schema: 'https://json-schema.org/...' }),
+      'x'
+    )
+    expect(score.value).toBe(1)
+  })
 })

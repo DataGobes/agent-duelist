@@ -22,6 +22,10 @@ export type { BenchmarkResult } from './runner.js'
 // Reporters
 export { consoleReporter, jsonReporter, markdownReporter, htmlReporter } from './reporter/index.js'
 
+// Packs
+export { loadPack, listPacks } from './packs/index.js'
+export type { TaskPack } from './packs/types.js'
+
 // CI
 export { compareResults, computeStats, loadBaseline, saveBaseline } from './ci.js'
 export type { CiReport, ScorerComparison, ScorerStats, CostSummary } from './ci.js'

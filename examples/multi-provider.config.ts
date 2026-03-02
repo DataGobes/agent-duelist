@@ -69,4 +69,5 @@ export default defineArena({
 
   scorers: ['latency', 'cost', 'correctness', 'schema-correctness', 'llm-judge-correctness'],
   runs: 3,
+  timeout: 120000 // 2 minutes time out to give local models a fair chance to complete
 })

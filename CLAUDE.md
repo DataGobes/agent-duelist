@@ -32,6 +32,11 @@ src/
     latency.ts       → normalizes latency to 0–1
     cost.ts          → estimates cost from token usage
     correctness.ts   → exact-match comparison
+  packs/
+    types.ts             → TaskPack interface
+    index.ts             → pack registry + loadPack() + listPacks()
+    loader.ts            → buildPackConfig() merges packs with providers
+    structured-output.ts → Zod schema stress test (6 tasks)
   reporter/
     console.ts       → CLI table output
     json.ts          → JSON output

@@ -84,19 +84,10 @@ export function htmlReporter(results: BenchmarkResult[]): string {
     .filter(p => p.avg !== undefined)
     .sort((a, b) => a.avg! - b.avg!)[0]
 
-  // Overall winner
+  // Overall winner — quality-first (fastest/cheapest are shown separately)
   let overallWinner: string | undefined
-  if (multi) {
-    const wins = new Map<string, number>()
-    for (const id of providers) wins.set(id, 0)
-    if (byCorrectness) wins.set(byCorrectness.id, (wins.get(byCorrectness.id) ?? 0) + 1)
-    if (byLatency && byLatency.avg !== Infinity) wins.set(byLatency.id, (wins.get(byLatency.id) ?? 0) + 1)
-    if (byCost?.avg !== undefined) wins.set(byCost.id, (wins.get(byCost.id) ?? 0) + 1)
-    const maxWins = Math.max(...wins.values())
-    if (maxWins > 0) {
-      const tops = [...wins.entries()].filter(([, w]) => w === maxWins)
-      if (tops.length === 1) overallWinner = tops[0]![0]
-    }
+  if (multi && byCorrectness && byCorrectness.avg > 0) {
+    overallWinner = byCorrectness.id
   }
 
   // Error details

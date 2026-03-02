@@ -3,7 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { registerPricing } from '../pricing/lookup.js'
 import type { ToolDefinition } from '../tasks/types.js'
 import type { ArenaProvider, TaskInput, TaskResult, ToolCall } from './types.js'
-import { SCHEMA_SYSTEM_MESSAGE, parseSchemaOutput } from './shared.js'
+import { buildSchemaSystemMessage, parseSchemaOutput } from './shared.js'
 
 /** Default per-request timeout in ms (60 s). Prevents hanging on unresponsive APIs. */
 export const REQUEST_TIMEOUT_MS = 60_000
@@ -109,7 +109,7 @@ export function makeProvider(
       if (input.schema) {
         params.response_format = { type: 'json_object' }
         params.messages = [
-          { role: 'system', content: SCHEMA_SYSTEM_MESSAGE },
+          { role: 'system', content: buildSchemaSystemMessage(input.schema) },
           ...params.messages,
         ]
       }

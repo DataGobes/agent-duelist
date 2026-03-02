@@ -15,7 +15,7 @@ export interface TaskInput {
 }
 
 export interface TaskResult {
-  output: string | Record<string, unknown>
+  output: string | Record<string, unknown> | unknown[]
   usage?: {
     promptTokens?: number
     completionTokens?: number

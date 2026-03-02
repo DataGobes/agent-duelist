@@ -9,7 +9,7 @@ export interface BenchmarkResult {
   scores: ScoreResult[]
   error?: string
   raw: {
-    output: string | Record<string, unknown>
+    output: string | Record<string, unknown> | unknown[]
     latencyMs: number
     usage?: { promptTokens?: number; completionTokens?: number }
     toolCalls?: ToolCall[]
